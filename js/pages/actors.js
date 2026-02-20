@@ -12,9 +12,9 @@ export function renderActors(container) {
       <!-- Network Graph (Canvas) -->
       <div class="panel" data-animate style="padding:0; overflow:hidden; position:relative;">
         <div style="position:absolute; top:var(--sp-16); left:var(--sp-16); z-index:5;">
-          <span class="panel__title" style="text-shadow: 0 2px 8px rgba(0,0,0,0.5);">Network Graph</span>
+          <span class="panel__title">Network Graph</span>
         </div>
-        <canvas id="actor-canvas" style="width:100%; height:100%;"></canvas>
+        <canvas id="actor-canvas" style="width:100%; height:100%; background:radial-gradient(circle at 40% 25%, rgba(10,132,255,0.08) 0%, rgba(10,132,255,0.02) 45%, rgba(10,132,255,0) 70%);"></canvas>
       </div>
 
       <!-- Actor List -->
@@ -126,13 +126,12 @@ function drawNetworkGraph() {
   ];
 
   // Animated draw
-  let progress = 0;
   function draw() {
     ctx.clearRect(0, 0, w, h);
 
     // Background gradient
     const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, w * 0.5);
-    bg.addColorStop(0, 'rgba(30, 41, 59, 0.3)');
+    bg.addColorStop(0, 'rgba(10, 132, 255, 0.08)');
     bg.addColorStop(1, 'transparent');
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, w, h);
@@ -144,7 +143,7 @@ function drawNetworkGraph() {
       ctx.beginPath();
       ctx.moveTo(from.x, from.y);
       ctx.lineTo(to.x, to.y);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+      ctx.strokeStyle = 'rgba(17, 24, 39, 0.12)';
       ctx.lineWidth = 1;
       ctx.stroke();
 
@@ -154,7 +153,7 @@ function drawNetworkGraph() {
       const py = from.y + (to.y - from.y) * t;
       ctx.beginPath();
       ctx.arc(px, py, 2, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 140, 90, 0.4)';
+      ctx.fillStyle = 'rgba(10, 132, 255, 0.42)';
       ctx.fill();
     });
 
@@ -179,13 +178,13 @@ function drawNetworkGraph() {
       ctx.fill();
 
       // Label
-      ctx.font = '500 11px Inter';
-      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.font = '600 11px Manrope';
+      ctx.fillStyle = 'rgba(17,24,39,0.78)';
       ctx.textAlign = 'center';
       ctx.fillText(node.actor.name, node.x, node.y + 22);
 
-      ctx.font = '400 9px "JetBrains Mono"';
-      ctx.fillStyle = 'rgba(148,163,184,0.6)';
+      ctx.font = '400 9px "IBM Plex Mono"';
+      ctx.fillStyle = 'rgba(82,96,120,0.74)';
       ctx.fillText(node.actor.reach, node.x, node.y + 34);
     });
 

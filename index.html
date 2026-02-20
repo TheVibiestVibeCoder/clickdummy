@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="UTF-8">
@@ -8,7 +8,7 @@
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" rel="stylesheet">
 
   <!-- Three.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -22,13 +22,12 @@
 </head>
 <body>
   <div id="app">
-    <!-- Top Navigation -->
     <nav class="topnav">
-      <div style="display:flex; align-items:center; gap:0;">
+      <div class="topnav__left">
         <div class="topnav__brand">
-          Narrative Radar <span class="topnav__brand-accent">// Risk Intel</span>
+          Narrative Radar <span class="topnav__brand-accent">Risk Intelligence</span>
         </div>
-        <div class="topnav__divider" style="margin: 0 var(--sp-16);"></div>
+        <div class="topnav__divider"></div>
         <div class="topnav__links">
           <a class="nav-link is-active" data-href="/">Dashboard</a>
           <a class="nav-link" data-href="/narratives">Narratives</a>
@@ -37,23 +36,23 @@
           <a class="nav-link" data-href="/settings">Settings</a>
         </div>
       </div>
+
       <div class="topnav__actions">
         <div class="kbd-hint" id="cmd-k-trigger">
           <kbd>&#8984;K</kbd>
           <span>Search</span>
         </div>
-        <div style="display:flex; align-items:center; gap:var(--sp-8); margin-left:var(--sp-8);">
-          <span style="font-size:var(--text-xs); color:var(--text-secondary);">EU-Sovereign</span>
-          <span style="width:7px;height:7px;border-radius:50%;background:var(--sentiment-pos);box-shadow:0 0 6px rgba(34,197,94,0.4);display:inline-block;"></span>
+
+        <div class="topnav__status">
+          <span class="topnav__status-label">EU-Sovereign</span>
+          <span class="topnav__status-dot"></span>
         </div>
       </div>
     </nav>
 
-    <!-- Page Content (router mounts here) -->
     <main class="page-content page-enter" id="page"></main>
   </div>
 
-  <!-- App Module -->
   <script type="module" src="js/app.js"></script>
 </body>
 </html>

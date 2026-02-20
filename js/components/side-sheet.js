@@ -69,7 +69,7 @@ export function openSideSheet(data) {
 
     <div class="modal__section">
       <div class="modal__label">Sentiment & Trend</div>
-      <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,0.2); padding:var(--sp-16); border-radius:var(--radius-md);">
+      <div style="display:flex; align-items:center; justify-content:space-between; background:var(--surface-muted); border:1px solid var(--border-subtle); padding:var(--sp-16); border-radius:var(--radius-md);">
         <div>
           <div style="font-size:var(--text-xs); color:var(--text-secondary); margin-bottom:var(--sp-4);">Sentiment Score</div>
           <div style="font-size:var(--text-lg); font-weight:700; color:${color};">${label} (${data.score})</div>
