@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Wien Energie // Narrative Radar</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <style>
+        :root {
+            /* --- CORPORATE SLATE / ORANGE PALETTE --- */
+            --bg-dark: #0f172a; /* Slate 900 */
+            --bg-panel: #1e293b; /* Slate 800 */
+            --bg-panel-translucent: rgba(30, 41, 59, 0.95);
+            
+            --accent-primary: #FF8C5A; /* Primary Orange */
+            --accent-secondary: #FFA07A; /* Lighter Orange */
+            
+            --text-main: #ffffff;
+            --text-secondary: #94a3b8; /* Slate 400 */
+            --text-muted: #cbd5e1; /* Slate 300 */
+            
+            --sentiment-pos: #22c55e; /* Tailwind Green */
+            --sentiment-neg: #ef4444; /* Tailwind Red */
+            
+            --border-light: rgba(255, 255, 255, 0.1);
+            --grid-gap: 16px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            height: 100vh;
+            width: 100vw;
+            overflow-y: auto; 
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            background-image: radial-gradient(circle at 50% 0%, #2a364a 0%, var(--bg-dark) 80%);
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-size: cover;
+        }
+
+        /* Typography Resets */
+        h1, h2, h3 { font-weight: 600; letter-spacing: normal; }
+        .tech-font { font-family: 'Inter', sans-serif; font-weight: 600; text-transform: none; letter-spacing: normal; }
+
+        /* --- LAYOUT SYSTEM --- */
+        .dashboard-container {
+            display: grid;
+            grid-template-rows: 70px 1fr 240px; 
+            grid-template-columns: minmax(300px, 18%) 1fr minmax(320px, 22%); 
+            gap: var(--grid-gap);
+            padding: 20px;
+            height: 100%;
+            width: 100%;
+            max-width: 2560px;
+            margin: 0 auto;
+            position: relative;
+            min-height: 900px; 
+        }
+
+        .header-bar { grid-column: 1 / -1; }
+        
+        .col-left { 
+            grid-column: 1; grid-row: 2; 
+            display: flex; flex-direction: column; gap: var(--grid-gap);
+            height: 100%; max-height: 100%; overflow: hidden; 
+        }
+        
+        .col-left .tile:first-child { flex: 0 0 auto; height: 150px; } 
+        .col-left .tile:nth-child(2) { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; } 
+
+        .col-center { grid-column: 2; grid-row: 2; }
+        .col-right { grid-column: 3; grid-row: 2; }
+        .row-bottom-container { grid-column: 1 / -1; grid-row: 3; }
+
+        /* --- COMPONENT STYLES --- */
+        .tile {
+            background: var(--bg-panel-translucent);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            padding: 20px;
+            position: relative;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            display: flex; flex-direction: column;
+        }
+
+        .tile-header {
+            font-family: 'Inter', sans-serif; 
+            font-weight: 600;
+            font-size: 0.9rem; 
+            color: var(--accent-primary);
+            margin-bottom: 12px; 
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border-light); 
+            padding-bottom: 10px; 
+            flex-shrink: 0;
+            text-transform: none; 
+            letter-spacing: normal;
+        }
+
+        .header-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            background: var(--bg-panel); 
+            border: 1px solid var(--border-light); 
+            padding: 0 24px; border-radius: 8px;
+        }
+
+        .app-title { 
+            font-size: 1.1rem; 
+            font-weight: 600; 
+            color: #fff; 
+            border-right: 1px solid var(--border-light); 
+            padding-right: 24px; margin-right: 24px; 
+            white-space: nowrap; 
+            letter-spacing: -0.02em;
+        }
+
+        .zoom-controls { flex-grow: 1; display: flex; align-items: center; gap: 20px; }
+        .zoom-icon { font-family: 'Inter', sans-serif; font-weight: 500; color: var(--text-secondary); font-size: 1.2rem; cursor: pointer; user-select: none; transition: color 0.2s; }
+        .zoom-icon:hover { color: var(--accent-primary); }
+        
+        .slider-container { flex-grow: 1; position: relative; height: 40px; display: flex; align-items: center; padding: 0 10px; }
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 14px; width: 14px; border: 2px solid #fff;
+            border-radius: 50%;
+            background: var(--accent-primary); cursor: pointer; margin-top: -6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 2px; cursor: pointer; background: var(--text-secondary); opacity: 0.3;
+        }
+        .zoom-labels { display: flex; justify-content: space-between; width: 100%; position: absolute; top: -8px; left: 0; padding: 0 10px; pointer-events: none; }
+        .zoom-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; color: var(--text-secondary); font-weight: 500; }
+
+        .stat-number { font-size: 2.2rem; font-weight: 600; color: #fff; margin-top: 5px; letter-spacing: -0.03em;}
+        .stat-sub { font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px; line-height: 1.2; margin-bottom: 5px; }
+        .sentiment-indicator { font-size: 1.2rem; font-weight: 600; margin-top: 5px; color: #fff; }
+        
+        /* SENTIMENT CARD */
+        .sentiment-overview { margin-bottom: 15px; flex-shrink: 0; }
+        .sentiment-list-container { 
+            overflow-y: auto; flex-grow: 1; min-height: 0; 
+            scrollbar-width: thin; scrollbar-color: var(--text-secondary) transparent;
+            margin-right: -8px; padding-right: 8px;
+        }
+        .sentiment-list-container::-webkit-scrollbar { width: 4px; }
+        .sentiment-list-container::-webkit-scrollbar-thumb { background: var(--text-secondary); border-radius: 2px; opacity: 0.5; }
+        .sentiment-item { margin-bottom: 16px; cursor: pointer; }
+        .sentiment-head { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; margin-bottom: 6px; }
+        .bar-track { width: 100%; height: 6px; background: rgba(255,255,255,0.1); position: relative; border-radius: 3px; overflow: hidden; margin-top: 4px; }
+        .bar-center-line { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,0.2); z-index: 2; }
+        .bar-fill { height: 100%; position: absolute; top: 0; z-index: 1; opacity: 0.3; filter: blur(2px); transition: width 0.5s, left 0.5s; }
+        .bar-fill-solid { height: 100%; position: absolute; top: 0; z-index: 1; opacity: 1; transition: width 0.5s, left 0.5s; }
+        .sentiment-details { max-height: 0; overflow: hidden; transition: max-height 0.3s ease, opacity 0.3s; opacity: 0; margin-left: 10px; border-left: 1px solid var(--border-light); padding-left: 10px; }
+        .sentiment-item.active .sentiment-details { max-height: 300px; opacity: 1; margin-top: 8px; padding-bottom: 4px; }
+        .sentiment-sub-item { margin-bottom: 8px; font-size: 0.75rem; color: var(--text-secondary); }
+
+        /* --- 3D CONTAINER & SWITCH --- */
+        .col-center { position: relative; overflow: hidden; min-height: 0; border: 1px solid var(--border-light); background: transparent !important; box-shadow: none !important; backdrop-filter: none !important; }
+        .view-toggle { display: flex; gap: 8px; background: rgba(255,255,255,0.05); padding: 3px; border-radius: 6px; }
+        .toggle-btn {
+            font-family: 'Inter', sans-serif; font-weight: 600; font-size: 0.75rem; color: var(--text-secondary);
+            padding: 6px 12px; border-radius: 4px; cursor: pointer; border: none; transition: all 0.2s;
+        }
+        .toggle-btn:hover { color: #fff; }
+        .toggle-btn.active { background: var(--bg-panel); color: var(--accent-primary); box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        
+        .graph-layer { position: absolute; top: 50px; left: 0; width: 100%; height: calc(100% - 50px); transition: opacity 0.3s; }
+        #webgl-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; display:block; }
+        #hud-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
+        #interaction-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 3; cursor: grab; }
+        #interaction-layer:active { cursor: grabbing; }
+        
+        .list-layer { 
+            position: absolute; top: 65px; left: 0; width: 100%; height: calc(100% - 65px); 
+            opacity: 0; pointer-events: none; z-index: 0; overflow-y: auto; padding: 10px;
+            transition: opacity 0.3s; background: rgba(15, 23, 42, 0.5); scrollbar-width: thin;
+        }
+        .list-layer.active { opacity: 1; pointer-events: auto; z-index: 10; }
+        
+        .center-list-group { margin-bottom: 20px; }
+        .center-list-header { 
+            font-family: 'Inter'; font-size: 0.9rem; font-weight: 600; padding-bottom: 8px; 
+            border-bottom: 1px solid var(--border-light); margin-bottom: 10px; 
+            cursor: pointer; transition: color 0.2s;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .center-list-header:hover { opacity: 0.8; }
+        
+        .list-micro-row { font-size: 0.8rem; color: var(--text-muted); margin-top: 8px; display: flex; align-items: center; cursor: pointer; padding: 4px 0; transition: background 0.2s; border-radius: 4px;}
+        .list-micro-row:hover { background: rgba(255,255,255,0.05); color: #fff; }
+        .list-dot { width: 4px; height: 4px; background: var(--accent-primary); border-radius: 50%; margin-right: 8px; margin-left: 4px; }
+        .list-explanation { font-family: 'Inter'; font-size: 0.8rem; color: var(--text-secondary); margin-top: 8px; padding: 10px; background: rgba(255,255,255,0.03); border-left: 2px solid var(--accent-primary); border-radius: 0 4px 4px 0; line-height: 1.5; }
+
+        /* NARRATIVES */
+        .col-right { overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--text-secondary) transparent; }
+        .col-right::-webkit-scrollbar { width: 4px; }
+        .col-right::-webkit-scrollbar-thumb { background: var(--text-secondary); border-radius: 2px; }
+        .narrative-item { border-bottom: 1px solid var(--border-light); padding: 16px 0; transition: background 0.2s; }
+        /* Only hover effect on non-active items in list view */
+        .narrative-item:hover { background: rgba(255,255,255,0.02); }
+        
+        .narrative-header { display: flex; justify-content: space-between; align-items: center; }
+        
+        /* Interactive title class */
+        .clickable-title { cursor: pointer; transition: color 0.2s; }
+        .clickable-title:hover { color: var(--accent-primary); text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(255, 140, 90, 0.5); }
+
+        .narrative-title { font-size: 0.9rem; font-weight: 600; margin-bottom: 4px; color: #fff; transition: color 0.2s;}
+        .narrative-meta { font-size: 0.75rem; color: var(--text-secondary); display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+        .sparkline { width: 50px; height: 15px; stroke-width: 2; fill: none; }
+        
+        .chevron { width: 24px; height: 24px; display:flex; align-items:center; justify-content:center; cursor: pointer; transition: transform 0.3s; opacity: 0.7; border-radius: 4px;}
+        .chevron::after { content:''; display:block; width: 6px; height: 6px; border-right: 2px solid var(--text-secondary); border-bottom: 2px solid var(--text-secondary); transform: rotate(45deg); }
+        .chevron:hover { background: rgba(255,255,255,0.1); }
+        .narrative-item.active .chevron, .sentiment-item.active .chevron { transform: rotate(-180deg); }
+        .narrative-item.active .chevron::after { border-color: var(--accent-primary); }
+        
+        .narrative-details { max-height: 0; overflow: hidden; transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s; opacity: 0; background: rgba(0,0,0,0.2); border-radius: 6px; margin-top: 8px; }
+        .narrative-item.active .narrative-details { max-height: 600px; opacity: 1; padding: 16px; border: 1px solid var(--border-light); }
+        .media-row { display: flex; align-items: center; margin-bottom: 8px; font-size: 0.75rem; }
+        .media-logo { width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; border-radius: 4px; font-weight: bold; margin-right: 12px; flex-shrink: 0; color: #fff; font-size: 0.7rem; }
+        
+        /* Logo Colors */
+        .logo-std { background: #E58D90; color: #fff; font-family: serif; letter-spacing: -1px; } .logo-kro { background: #d00; font-family: serif; font-style: italic; } .logo-pre { background: #fff; color: #004; font-family: sans-serif; } .logo-orf { background: #333; color: #fff; border: 1px solid #666; font-family: sans-serif;} .logo-kur { background: #fff; color: #000; font-family: serif; font-weight: 900; } .logo-x { background: #000; color: #fff; border: 1px solid #333; font-family: sans-serif; } .logo-ig { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color: #fff; font-family: sans-serif; } .logo-tik { background: #000; color: #00f0ff; border: 1px solid #333; font-family: sans-serif; text-shadow: 1px 1px 0 #ff0050; } .logo-tg { background: #229ED9; color: #fff; font-family: sans-serif; } .logo-fb { background: #1877F2; color: #fff; font-family: sans-serif; font-weight: bold; } .logo-red { background: #FF4500; color: #fff; font-family: sans-serif; font-weight: bold; } .logo-heise { background: #00a000; color: #fff; font-family: monospace; } .logo-auto { background: #222; color: #f00; font-style: italic; font-weight:bold; }
+        
+        .media-bar-container { flex-grow: 1; background: rgba(255,255,255,0.1); height: 4px; border-radius: 2px; margin: 0 10px; overflow: hidden; position: relative;}
+        .media-bar-fill { height: 100%; border-radius: 2px; animation: slideIn 0.5s ease-out forwards; width: 0%;}
+        .media-percent { width: 30px; text-align: right; color: var(--text-secondary); font-family: 'JetBrains Mono'; font-size: 0.7rem; }
+        @keyframes slideIn { to { width: var(--w); } }
+        .cluster-tag { font-size: 0.65rem; padding: 2px 8px; border-radius: 10px; margin-left: auto; margin-right: 8px; font-family: 'Inter'; font-weight: 600; border: 1px solid; }
+
+        /* BOTTOM REPORTING */
+        .row-bottom-container { display: grid; grid-template-columns: 1fr 1fr; gap: var(--grid-gap); }
+        .report-feed, .risk-feed { overflow-y: auto; padding-right: 5px; scrollbar-width: thin; }
+        .report-feed { scrollbar-color: var(--text-secondary) transparent; }
+        .risk-feed { scrollbar-color: var(--sentiment-neg) transparent; }
+        .report-feed::-webkit-scrollbar, .risk-feed::-webkit-scrollbar { width: 4px; }
+        .report-feed::-webkit-scrollbar-thumb { background: var(--text-secondary); border-radius: 2px; }
+        .risk-feed::-webkit-scrollbar-thumb { background: var(--sentiment-neg); border-radius: 2px; }
+        .report-card { background: rgba(255, 255, 255, 0.02); border-left: 3px solid var(--accent-primary); padding: 14px; margin-bottom: 12px; border-radius: 0 6px 6px 0; }
+        .risk-card { background: rgba(239, 68, 68, 0.05); border-left: 3px solid var(--sentiment-neg); padding: 14px; margin-bottom: 12px; border-radius: 0 6px 6px 0; }
+        .card-cluster-title { font-family: 'Inter'; font-weight: 600; font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 8px; display: flex; justify-content: space-between; }
+        .card-body { font-size: 0.9rem; line-height: 1.5; color: var(--text-muted); }
+        .alert-badge { background: var(--sentiment-neg); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; font-weight: 700; }
+
+        /* --- POP UP MODAL STYLES --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(8px);
+            z-index: 9999;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        
+        .modal-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            width: 90%; max-width: 550px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+            transform: scale(0.95); transition: transform 0.3s;
+            overflow: hidden;
+            display: flex; flex-direction: column;
+            /* Desktop default */
+            max-height: 80vh;
+        }
+        .modal-overlay.active .modal-card { transform: scale(1); }
+        
+        .modal-header {
+            padding: 20px; border-bottom: 1px solid var(--border-light);
+            display: flex; justify-content: space-between; align-items: center;
+            background: rgba(255,255,255,0.02);
+            flex-shrink: 0;
+        }
+        .modal-title { font-size: 1.1rem; font-weight: 600; color: #fff; }
+        .modal-close { cursor: pointer; color: var(--text-secondary); transition: color 0.2s; font-size: 1.5rem; line-height: 1; }
+        .modal-close:hover { color: #fff; }
+        
+        /* FIX: Ensure scrolling works on mobile */
+        .modal-body { 
+            padding: 24px; 
+            overflow-y: auto; 
+            flex-grow: 1;
+            scrollbar-width: thin; 
+            scrollbar-color: var(--text-secondary) transparent; 
+        }
+        
+        .modal-section { margin-bottom: 24px; }
+        .modal-section:last-child { margin-bottom: 0; }
+        .modal-label { font-size: 0.7rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border-light); padding-bottom: 4px; display: block; }
+        .modal-text { font-size: 0.95rem; line-height: 1.6; color: var(--text-muted); }
+        
+        .modal-sentiment-row { display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 6px; }
+        .modal-score { font-size: 1.2rem; font-weight: 700; }
+        
+        .modal-footer { padding: 16px 24px; background: rgba(0,0,0,0.2); font-size: 0.75rem; color: var(--text-secondary); display: flex; justify-content: space-between; flex-shrink: 0;}
+
+
+        /* --- RESPONSIVE BREAKPOINTS --- */
+        @media (min-width: 900px) and (max-width: 1400px) {
+            .dashboard-container { grid-template-columns: 1fr 1fr; grid-template-rows: 70px 450px 1fr; height: auto; min-height: 1200px; }
+            .header-bar { grid-column: 1 / -1; grid-row: 1; }
+            .col-left { grid-column: 1; grid-row: 2; height: auto; overflow: visible;}
+            .col-left .tile:nth-child(2) { height: 300px; min-height: 300px; } 
+            .col-center { grid-column: 2; grid-row: 2; }
+            .col-right { grid-column: 1; grid-row: 3; height: 600px; }
+            .row-bottom-container { grid-column: 2; grid-row: 3; display: flex; flex-direction: column; height: 600px; }
+            .row-bottom-container .tile { flex: 1; }
+        }
+
+        @media (max-width: 899px) {
+            body { height: auto; }
+            .dashboard-container { 
+                display: flex; flex-direction: column; 
+                height: auto; overflow: visible; min-height: auto;
+                padding: 10px; gap: 10px;
+            }
+            .header-bar { flex-direction: column; align-items: stretch; padding: 16px; gap: 12px; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid var(--border-light); order: 1; }
+            .app-title { border-right: none; border-bottom: 1px solid var(--border-light); padding-right: 0; padding-bottom: 12px; margin-right: 0; text-align: center; }
+            .zoom-controls { display: none; }
+            
+            .col-center { order: 2; min-height: 50vh; flex-shrink: 0; margin-bottom: 10px; }
+            .col-left { order: 3; flex-direction: row; flex-wrap: wrap; gap: 10px; height: auto; overflow: visible; }
+            .col-left .tile { flex: 1 1 100%; width: 100%; margin-bottom: 0; }
+            .col-left .tile:nth-child(2) { height: auto; min-height: 300px; }
+            .col-right { order: 4; max-height: none; min-height: 400px; }
+            .row-bottom-container { order: 5; display: flex; flex-direction: column; gap: 10px; }
+
+            #scatterContainer .tile-header {
+                flex-wrap: wrap;
+                height: auto;
+                gap: 8px;
+            }
+            #cluster-readout {
+                width: 100%;
+                text-align: right;
+                margin-top: 8px;
+                font-size: 0.7rem !important;
+                border-top: 1px solid var(--border-light);
+                padding-top: 8px;
+            }
+            
+            /* Mobile Modal Adjustments - Fixed Overflow */
+            .modal-card { 
+                width: 95%; 
+                position: fixed; /* Better than absolute for modals */
+                top: 50%; left: 50%; 
+                transform: translate(-50%, -50%) scale(0.95);
+                max-height: 85vh; 
+                border-radius: 16px; 
+                display: flex; 
+                flex-direction: column;
+            }
+            .modal-overlay.active .modal-card { transform: translate(-50%, -50%) scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="modal-overlay" id="narrative-modal" onclick="closeModal(event)">
+        <div class="modal-card" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-title" id="modal-title">Title</div>
+                <div class="modal-close" onclick="closeModal(event)">&times;</div>
+            </div>
+            <div class="modal-body" id="modal-body">
+                </div>
+            <div class="modal-footer">
+                <span>Narrative Intelligence System</span>
+                <span id="modal-tag" style="color:var(--accent-primary)">CLUSTER LEVEL</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-container">
+        <header class="header-bar">
+            <div class="app-title">Narrative Capture <span style="color:var(--accent-primary)">Wien Energie</span></div>
+            <div class="zoom-controls">
+                <div class="tech-font" style="font-size: 0.75rem; color: var(--text-secondary); white-space:nowrap;">Tiefe & Kamera</div>
+                <div class="zoom-icon" onclick="adjustZoom(-0.1)">-</div>
+                <div class="slider-container">
+                    <div class="zoom-labels">
+                        <span class="zoom-label">Macro</span>
+                        <span class="zoom-label">Sub</span>
+                        <span class="zoom-label">Micro</span>
+                    </div>
+                    <input type="range" id="zoomSlider" min="0.5" max="3.5" step="0.01" value="1.0">
+                </div>
+                <div class="zoom-icon" onclick="adjustZoom(0.1)">+</div>
+                <div class="tech-font" style="font-size: 0.8rem; color: var(--accent-primary); width: 45px; text-align:right;" id="zoomValue">1.0x</div>
+            </div>
+        </header>
+
+        <div class="col-left">
+            <div class="tile">
+                <div class="tile-header">Quellen-Status</div>
+                <div class="stat-number">42.8k</div>
+                <div class="stat-sub">Social & Media Posts analysiert (24h)</div>
+                <div style="margin-top:auto; height: 50px; display:flex; align-items:end; gap:4px; width: 100%;">
+                    <div style="width:15%; height:40%; background:var(--text-secondary); border-radius:2px 2px 0 0; opacity:0.5;"></div>
+                    <div style="width:15%; height:70%; background:var(--text-secondary); border-radius:2px 2px 0 0; opacity:0.7;"></div>
+                    <div style="width:15%; height:50%; background:var(--text-secondary); border-radius:2px 2px 0 0; opacity:0.6;"></div>
+                    <div style="width:15%; height:90%; background:var(--accent-primary); box-shadow: 0 0 10px rgba(255, 140, 90, 0.3); border-radius:2px 2px 0 0;"></div>
+                    <div style="width:15%; height:60%; background:var(--text-secondary); border-radius:2px 2px 0 0; opacity:0.6;"></div>
+                    <div style="width:15%; height:80%; background:var(--text-secondary); border-radius:2px 2px 0 0; opacity:0.4;"></div>
+                </div>
+            </div>
+            
+            <div class="tile" id="sentiment-panel">
+                <div class="tile-header">Gesamt-Sentiment</div>
+                <div class="sentiment-overview">
+                    <div class="sentiment-indicator" id="global-sentiment-text">Calculating...</div>
+                    <div class="stat-sub" id="global-sentiment-score">Score: ...</div>
+                    <div id="global-bar-container"></div>
+                </div>
+                <div class="sentiment-list-container" id="sentiment-list"></div>
+            </div>
+        </div>
+
+        <div class="col-center tile" id="scatterContainer">
+            <div class="tile-header" style="z-index: 5; background: transparent; border: none; box-shadow: none; margin-bottom: 0;">
+                <div style="display:flex; align-items:center; gap:15px;">
+                    <span style="text-shadow: 0 1px 3px rgba(0,0,0,0.5);">Narrative Map</span>
+                    <div class="view-toggle">
+                        <div class="toggle-btn active" id="btn-graph" onclick="toggleView('graph')">Graph</div>
+                        <div class="toggle-btn" id="btn-list" onclick="toggleView('list')">Liste</div>
+                    </div>
+                </div>
+                <span style="color: var(--text-secondary); text-shadow: 0 1px 3px rgba(0,0,0,0.5); font-size: 0.75rem;" id="cluster-readout">Zoom: Macro</span>
+            </div>
+            
+            <div id="graph-wrapper" class="graph-layer">
+                <canvas id="webgl-canvas"></canvas>
+                <canvas id="hud-canvas"></canvas>
+                <div id="interaction-layer"></div>
+            </div>
+
+            <div id="list-view-wrapper" class="list-layer">
+                <div id="center-list-content"></div>
+            </div>
+        </div>
+
+        <div class="col-right tile">
+            <div class="tile-header">
+                <span>Top Meta-Narrative (24h)</span>
+                <span style="color:var(--text-secondary); font-size:0.7rem; font-weight:500;">Cross-Platform</span>
+            </div>
+            <div id="narrative-list"></div>
+        </div>
+
+        <div class="row-bottom-container">
+            <div class="tile">
+                <div class="tile-header">Intelligence Reporting</div>
+                <div id="reporting-feed" class="report-feed"></div>
+            </div>
+            <div class="tile">
+                <div class="tile-header">Risk Forecast</div>
+                <div id="risk-feed" class="risk-feed"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // WIEN ENERGIE DATA SET
+        const CLUSTERS = [
+            { 
+                id: 1, x: -30, y: -22, z: 0, label: "PREIS & TARIFE", color: "#FF8C5A", 
+                reportText: "Das Narrativ 'Übergewinne auf Kosten der Kunden' dominiert weiterhin die Diskussion in sozialen Medien. Besonders die Jahresabrechnungen treiben negatives Sentiment. Vergleiche mit Spotmarktpreisen werden von AK und Boulevardmedien verstärkt.",
+                riskText: "Risiko einer koordinierten 'Zahlungsstreik'-Kampagne auf Telegram. Sammelklagen-Thematik gewinnt durch Berichterstattung des VKI an Fahrt.",
+                subTopics: [
+                    { 
+                        label: "Strompreise", offX: -10, offY: -10, trend: "flat", sentiment: "neg", score: -0.65, vol: "high",
+                        explanation: "Kunden empfinden die Senkungen als zu gering im Vergleich zum Großhandelspreis. 'Optima Entspannt' vs 'Garant' sorgt für Verwirrung.",
+                        micro: [
+                            {label: "Nachzahlungs-Schock", offX: -4, offY:-4, desc: "Nutzer posten Fotos hoher Nachzahlungen trotz Sparmaßnahmen. Emotional hoch aufgeladen."}, 
+                            {label: "Marktpreis-Gap", offX: 4, offY: 2, desc: "Technischer Diskurs über Merit-Order und warum Endkundenpreise nicht sofort sinken."}
+                        ],
+                        sources: [ {name: "Facebook", class: "logo-fb", label: "fb", share: 30}, {name: "Kronen Zeitung", class: "logo-kro", label: "K", share: 25}, {name: "Heute.at", class: "logo-kro", label: "H", share: 15}, {name: "Arbeiterkammer", class: "logo-red", label: "AK", share: 15}, {name: "Twitter/X", class: "logo-x", label: "X", share: 10}, {name: "Reddit", class: "logo-red", label: "r/", share: 5} ]
+                    },
+                    { 
+                        label: "Fernwärme", offX: 10, offY: -5, trend: "up", sentiment: "neg", score: -0.45, vol: "med",
+                        explanation: "Die Indexanpassung der Fernwärme wird als 'Monopol-Diktat' wahrgenommen. Mietervereinigungen mobilisieren in Online-Foren.",
+                        micro: [
+                            {label: "Grundgebühr", offX: 3, offY:-3, desc: "Kritik an hohen Fixkosten unabhängig vom Verbrauch. 'Sparen lohnt sich nicht'-Narrativ."}, 
+                            {label: "Monopol-Kritik", offX: -2, offY: 3, desc: "Politische Debatte über die Entflechtung des Fernwärmenetzes und fehlende Anbieterwahl."}
+                        ],
+                        sources: [ {name: "Reddit Wien", class: "logo-red", label: "r/W", share: 35}, {name: "Der Standard", class: "logo-std", label: "derS", share: 20}, {name: "Facebook", class: "logo-fb", label: "fb", share: 20}, {name: "Kurier", class: "logo-kur", label: "Ku", share: 15}, {name: "Twitter/X", class: "logo-x", label: "X", share: 10} ]
+                    },
+                    { 
+                        label: "Gaskosten", offX: 0, offY: 12, trend: "down", sentiment: "mixed", score: -0.15, vol: "low",
+                        explanation: "Das Thema verliert an Volatilität, aber die 'Raus aus Gas' Förderung sorgt für Unsicherheit bei Thermenbesitzern.",
+                        micro: [
+                            {label: "CO2-Steuer", offX: -3, offY:0, desc: "Diskussion über die schrittweise Erhöhung und Auswirkung auf die Heizkostenabrechnung."}, 
+                            {label: "Thermentausch", offX: 3, offY: 0, desc: "Fragen zur Machbarkeit und Finanzierung des Umstiegs in Altbauwohnungen."}
+                        ],
+                        sources: [ {name: "ORF.at", class: "logo-orf", label: "ORF", share: 30}, {name: "Die Presse", class: "logo-pre", label: "P", share: 20}, {name: "Facebook", class: "logo-fb", label: "fb", share: 20}, {name: "Google News", class: "logo-kro", label: "GN", share: 15}, {name: "Der Standard", class: "logo-std", label: "derS", share: 15} ]
+                    }
+                ]
+            }, 
+            { 
+                id: 2, x: 30, y: -7, z: 0, label: "WÄRMEWENDE & INFRA", color: "#22c55e", 
+                reportText: "Infrastrukturprojekte wie 'Geothermie Simmering' werden von Leitmedien sehr positiv aufgenommen. Auf lokaler Ebene dominiert jedoch der 'Baustellen-Frust' durch Straßensperren.",
+                riskText: "Lokaler Widerstand gegen Fernwärme-Ausbau in Währing und Döbling könnte sich zu einer stadtweiten 'Verkehrschaos'-Debatte ausweiten.",
+                subTopics: [
+                    { label: "Großprojekte", offX: -12, offY: 5, trend: "up", sentiment: "pos", score: 0.82, vol: "med", explanation: "Geothermie und Großwärmepumpen werden als technologische Leuchtturmprojekte gefeiert. Stärkt das Image als Innovationsführer.", micro: [{label: "Geothermie Simmering", offX: -3, offY:-3, desc: "Positives Echo auf die Versorgung von 125.000 Haushalten. 'Wien wird unabhängig'."}, {label: "Wasserstoff-Versuch", offX: 3, offY: 2, desc: "Technik-Blogs loben die Pilotanlage im Kraftwerk Donaustadt."}], sources: [ {name: "ORF Wien", class: "logo-orf", label: "ORF", share: 40}, {name: "LinkedIn", class: "logo-fb", label: "in", share: 25}, {name: "Der Standard", class: "logo-std", label: "derS", share: 15}, {name: "Stadt Wien", class: "logo-wien", label: "W", share: 10}, {name: "Tech Blogs", class: "logo-heise", label: "TB", share: 10} ]},
+                    { label: "Baustellen", offX: 12, offY: -8, trend: "up", sentiment: "neg", score: -0.55, vol: "high", explanation: "Der notwendige Fernwärme-Ausbau führt zu Verkehrsbehinderungen. Narrative verschieben sich von 'Notwendigkeit' zu 'Planlosigkeit'.", micro: [{label: "Gürtel-Stau", offX: 1, offY:-3, desc: "Massive Beschwerden über gleichzeitige Aufgrabungen in mehreren Bezirken."}, {label: "Parkplatzverlust", offX: 2, offY: 3, desc: "Lokaler Ärger über temporäre Halteverbote für Baufahrzeuge."}], sources: [ {name: "Facebook Bezirksgruppen", class: "logo-fb", label: "fb", share: 45}, {name: "Heute", class: "logo-kro", label: "H", share: 20}, {name: "Nextdoor", class: "logo-tg", label: "nd", share: 15}, {name: "Bezirkszeitung", class: "logo-kro", label: "BZ", share: 15}, {name: "Twitter/X", class: "logo-x", label: "X", share: 5} ]}
+                ]
+            },  
+            { 
+                id: 3, x: 0, y: 29, z: 0, label: "VERSORGUNG & INNOVATION", color: "#a0ced9", 
+                reportText: "Das Thema Versorgungssicherheit ist stabil. E-Mobilität wächst stetig, aber die 'Ladesäulen-Blockierer' sind ein emotionales Aufregerthema.",
+                riskText: "Sicherheitslücke bei Smart Metern könnte instrumentalisiert werden. Erste Berichte in Nischen-Foren über angebliche Datenschutzprobleme.",
+                subTopics: [
+                    { label: "E-Mobilität", offX: -10, offY: -5, trend: "up", sentiment: "pos", score: 0.35, vol: "med", explanation: "Ausbau der Ladeinfrastruktur wird honoriert, aber Verfügbarkeit in Außenbezirken kritisiert.", micro: [{label: "Ladesäulen-Mangel", offX: -3, offY:-2, desc: "Forderung nach mehr Schnellladern in Transdanubien (Floridsdorf/Donaustadt)."}, {label: "E-Tarife", offX: 3, offY: 2, desc: "Diskussion über die Attraktivität der neuen Tanke-Wien-Energie Tarife."}], sources: [ {name: "GoingElectric Forum", class: "logo-auto", label: "GE", share: 35}, {name: "Facebook E-Auto AT", class: "logo-fb", label: "fb", share: 25}, {name: "Instagram", class: "logo-ig", label: "IG", share: 20}, {name: "Twitter/X", class: "logo-x", label: "X", share: 10}, {name: "Auto Revue", class: "logo-auto", label: "AR", share: 10} ]},
+                    { label: "Smart Meter", offX: 8, offY: 6, trend: "flat", sentiment: "mixed", score: 0.10, vol: "low", explanation: "Rollout ist weitgehend abgeschlossen. Fokus verschiebt sich auf die Nutzung der Daten im Webportal.", micro: [{label: "Portal-Login", offX: -2, offY:-3, desc: "Technische Probleme beim Login und der Datenvisualisierung am Wochenende."}, {label: "Datenschutz", offX: 3, offY: 2, desc: "Verschwörungstheorien über Fernabschaltung in Telegram-Gruppen (Nische)."}], sources: [ {name: "Help.gv.at Forum", class: "logo-std", label: "gv", share: 30}, {name: "Twitter/X Support", class: "logo-x", label: "X", share: 25}, {name: "Telegram", class: "logo-tg", label: "tg", share: 25}, {name: "Futurezone", class: "logo-heise", label: "Fz", share: 20} ] }
+                ]
+            }        
+        ];
+
+        // --- HELPER FOR MODAL ---
+        function getSentimentColor(score) {
+            if(score > 0.3) return 'var(--sentiment-pos)';
+            if(score < -0.3) return 'var(--sentiment-neg)';
+            return '#eab308';
+        }
+        function getTrendPoints(score) {
+            if(score > 0.3) return "0,20 10,15 20,18 30,10 40,12 50,5 60,0"; // Up
+            if(score < -0.3) return "0,5 10,8 20,5 30,12 40,15 50,18 60,20"; // Down
+            return "0,10 10,5 20,15 30,5 40,15 50,8 60,10"; // Flat
+        }
+
+        function openModalComplex(data) {
+            document.getElementById('modal-title').innerText = data.title;
+            document.getElementById('modal-tag').innerText = data.type.toUpperCase();
+            
+            const color = getSentimentColor(data.score);
+            const scoreLabel = data.score > 0 ? "POSITIV" : (data.score < 0 ? "NEGATIV" : "NEUTRAL");
+
+            // Generate Actors HTML
+            let actorsHTML = '';
+            if(data.sources && data.sources.length > 0) {
+                actorsHTML = data.sources.map(src => 
+                    `<div class="media-row">
+                        <div class="media-logo ${src.class}">${src.label}</div>
+                        <div style="width: 80px; color: #94a3b8;">${src.name}</div>
+                        <div class="media-bar-container"><div class="media-bar-fill" style="background:${data.clusterColor || 'var(--accent-primary)'}; --w:${src.share}%"></div></div>
+                        <div class="media-percent">${src.share}%</div>
+                    </div>`
+                ).join('');
+            } else {
+                actorsHTML = '<div style="color:var(--text-secondary); font-size:0.8rem; font-style:italic;">Keine spezifischen Akteursdaten verfügbar.</div>';
+            }
+
+            const html = `
+                <div class="modal-section">
+                    <div class="modal-label">Zusammenfassung</div>
+                    <div class="modal-text">${data.text}</div>
+                </div>
+                
+                <div class="modal-section">
+                    <div class="modal-label">Sentiment & Trend</div>
+                    <div class="modal-sentiment-row">
+                        <div>
+                            <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:2px;">Sentiment Score</div>
+                            <div class="modal-score" style="color:${color}">${scoreLabel} (${data.score})</div>
+                        </div>
+                         <svg class="sparkline" style="width:100px; height:30px;" viewBox="0 0 60 20"><polyline points="${getTrendPoints(data.score)}" stroke="${color}" fill="none"/></svg>
+                    </div>
+                </div>
+
+                <div class="modal-section">
+                    <div class="modal-label">Actors Mix (Share of Voice)</div>
+                    <div style="margin-top:12px;">${actorsHTML}</div>
+                </div>
+            `;
+            
+            document.getElementById('modal-body').innerHTML = html;
+            document.getElementById('narrative-modal').classList.add('active');
+        }
+
+        function closeModal(e) {
+            if(e) e.stopPropagation();
+            document.getElementById('narrative-modal').classList.remove('active');
+        }
+
+        // --- VIEW TOGGLE LOGIC ---
+        function toggleView(mode) {
+            const btnGraph = document.getElementById('btn-graph');
+            const btnList = document.getElementById('btn-list');
+            const graphWrap = document.getElementById('graph-wrapper');
+            const listWrap = document.getElementById('list-view-wrapper');
+            
+            if(mode === 'graph') {
+                btnGraph.classList.add('active'); btnList.classList.remove('active');
+                graphWrap.style.opacity = '1'; graphWrap.style.pointerEvents = 'auto';
+                listWrap.classList.remove('active');
+                onWindowResize();
+            } else {
+                btnList.classList.add('active'); btnGraph.classList.remove('active');
+                graphWrap.style.opacity = '0'; graphWrap.style.pointerEvents = 'none';
+                listWrap.classList.add('active');
+            }
+        }
+
+        function renderCenterList() {
+            const container = document.getElementById('center-list-content');
+            container.innerHTML = '';
+            CLUSTERS.forEach(cluster => {
+                const group = document.createElement('div');
+                group.className = 'center-list-group';
+                
+                // Aggregate score for Cluster
+                let totalScore = 0;
+                cluster.subTopics.forEach(s => totalScore += s.score);
+                let avgScore = parseFloat((totalScore / cluster.subTopics.length).toFixed(2));
+                
+                // Use first subtopic sources as proxy for cluster level demo
+                let proxySources = cluster.subTopics[0].sources; 
+
+                const header = document.createElement('div');
+                header.className = 'center-list-header';
+                header.style.color = cluster.color;
+                header.innerHTML = `<span>${cluster.label}</span><span style="font-size:0.7em; opacity:0.7;">ℹ</span>`;
+                
+                header.onclick = () => openModalComplex({
+                    title: cluster.label,
+                    text: cluster.reportText,
+                    type: "Cluster Brief",
+                    score: avgScore,
+                    sources: proxySources,
+                    clusterColor: cluster.color
+                });
+                group.appendChild(header);
+
+                cluster.subTopics.forEach((sub, sIndex) => {
+                    const item = document.createElement('div');
+                    item.className = 'narrative-item'; 
+                    
+                    // Generate HTML for Micro-Narratives with data attributes
+                    let microHTML = sub.micro.map((m, mIndex) => 
+                        `<div class="list-micro-row" data-cluster-id="${cluster.id}" data-sub-index="${sIndex}" data-micro-index="${mIndex}"><div class="list-dot"></div>${m.label}</div>`
+                    ).join('');
+
+                    item.innerHTML = `
+                        <div class="narrative-header">
+                            <div style="display:flex; align-items:center;">
+                                <div class="chevron" onclick="this.closest('.narrative-item').classList.toggle('active')"></div>
+                                <div class="narrative-title clickable-title" data-cluster-id="${cluster.id}" data-sub-index="${sIndex}">${sub.label}</div>
+                            </div>
+                        </div>
+                        <div class="narrative-details">
+                            <div class="list-explanation">${sub.explanation}</div>
+                            <div style="margin-top:10px;">
+                                <div style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:4px;">Micro-Narratives:</div>
+                                ${microHTML}
+                            </div>
+                        </div>`;
+                    
+                    group.appendChild(item);
+                });
+                container.appendChild(group);
+            });
+
+            // ATTACH EVENT LISTENERS AFTER RENDERING (Safe from Quotes)
+            
+            // 1. Sub-Cluster Titles
+            document.querySelectorAll('.clickable-title').forEach(el => {
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const cId = el.getAttribute('data-cluster-id');
+                    const sIdx = el.getAttribute('data-sub-index');
+                    const cluster = CLUSTERS.find(c => c.id == cId);
+                    const sub = cluster.subTopics[sIdx];
+                    
+                    openModalComplex({
+                        title: sub.label,
+                        text: sub.explanation,
+                        type: "Sub-Cluster Brief",
+                        score: sub.score,
+                        sources: sub.sources,
+                        clusterColor: cluster.color
+                    });
+                });
+            });
+
+            // 2. Micro-Narrative Rows
+            document.querySelectorAll('.list-micro-row').forEach(el => {
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const cId = el.getAttribute('data-cluster-id');
+                    const sIdx = el.getAttribute('data-sub-index');
+                    const mIdx = el.getAttribute('data-micro-index');
+                    
+                    const cluster = CLUSTERS.find(c => c.id == cId);
+                    const sub = cluster.subTopics[sIdx];
+                    const micro = sub.micro[mIdx];
+
+                    openModalComplex({
+                        title: micro.label,
+                        text: micro.desc,
+                        type: "Micro-Narrative",
+                        score: sub.score, 
+                        sources: sub.sources,
+                        clusterColor: cluster.color
+                    });
+                });
+            });
+        }
+
+        function renderNarrativeList() {
+            const listContainer = document.getElementById('narrative-list');
+            const reportFeed = document.getElementById('reporting-feed');
+            const riskFeed = document.getElementById('risk-feed');
+            listContainer.innerHTML = ''; reportFeed.innerHTML = ''; riskFeed.innerHTML = '';
+            
+            CLUSTERS.forEach((cluster) => {
+                cluster.subTopics.forEach((sub, sIndex) => {
+                    const item = document.createElement('div'); item.className = 'narrative-item';
+                    
+                    let isPositive = sub.sentiment === 'pos';
+                    let sentimentColor = isPositive ? '#acd8aa' : 'var(--sentiment-neg)';
+                    let sentimentText = isPositive ? 'Positiv' : (sub.sentiment === 'neg' ? 'Sentiment Negativ' : 'Gemischt');
+                    let visualTrend = isPositive ? 'up' : 'down';
+                    let arrow = isPositive ? "↗" : "↘";
+                    
+                    let sHTML = sub.sources.map(src => `<div class="media-row"><div class="media-logo ${src.class}">${src.label}</div><div style="width: 80px; color: #94a3b8;">${src.name}</div><div class="media-bar-container"><div class="media-bar-fill" style="background:${cluster.color}; --w:${src.share}%"></div></div><div class="media-percent">${src.share}%</div></div>`).join('');
+                    
+                    item.innerHTML = `
+                        <div class="narrative-header">
+                            <div style="display:flex; align-items:center;">
+                                <div class="chevron"></div>
+                                <div class="narrative-title clickable-title-right" data-cluster-id="${cluster.id}" data-sub-index="${sIndex}">${sub.label} <span style="color:${sentimentColor}; font-size:0.9em; margin-left:12px;">${arrow}</span></div>
+                            </div>
+                            <div class="cluster-tag" style="color:${cluster.color}; border-color:${cluster.color}55; background:${cluster.color}11">${cluster.label}</div>
+                        </div>
+                        <div class="narrative-meta">
+                            <span style="color: ${sentimentColor}; font-weight:500;">${sentimentText}</span>
+                            <svg class="sparkline" viewBox="0 0 60 20"><polyline points="${generateSparkPoints(visualTrend)}" stroke="${sentimentColor}" fill="none"/></svg>
+                        </div>
+                        <div class="narrative-details">
+                            <div class="narrative-title" style="font-size:0.8rem; margin-bottom:8px; color:var(--text-muted);">${sub.explanation}</div>
+                            <div style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:8px; font-family:'Inter'; font-weight:600;">MEDIA MIX & QUELLEN:</div>${sHTML}
+                        </div>`;
+                    
+                    // Toggle Accordion
+                    item.addEventListener('click', (e) => {
+                        if(!e.target.classList.contains('clickable-title-right')) item.classList.toggle('active');
+                    });
+
+                    listContainer.appendChild(item);
+                });
+
+                const repItem = document.createElement('div'); repItem.className = 'report-card';
+                repItem.innerHTML = `<div class="card-cluster-title" style="color:${cluster.color}">${cluster.label}</div><div class="card-body">${cluster.reportText}</div>`;
+                reportFeed.appendChild(repItem);
+                const riskItem = document.createElement('div'); riskItem.className = 'risk-card';
+                riskItem.innerHTML = `<div class="card-cluster-title" style="color:${cluster.color}">${cluster.label}</div><div class="card-body">${cluster.riskText}</div>`;
+                riskFeed.appendChild(riskItem);
+            });
+
+            // Attach Listeners for Right Column
+            document.querySelectorAll('.clickable-title-right').forEach(el => {
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const cId = el.getAttribute('data-cluster-id');
+                    const sIdx = el.getAttribute('data-sub-index');
+                    const cluster = CLUSTERS.find(c => c.id == cId);
+                    const sub = cluster.subTopics[sIdx];
+                    
+                    openModalComplex({
+                        title: sub.label,
+                        text: sub.explanation,
+                        type: "Sub-Cluster Brief",
+                        score: sub.score,
+                        sources: sub.sources,
+                        clusterColor: cluster.color
+                    });
+                });
+            });
+        }
+
+        function createSentimentBar(score) {
+            let barColor = score < 0 ? 'var(--sentiment-neg)' : 'var(--sentiment-pos)';
+            if(Math.abs(score) < 0.15) barColor = '#eab308'; 
+            const width = Math.abs(score) * 50; 
+            const left = score < 0 ? (50 - width) + "%" : "50%";
+            return `<div class="bar-track"><div class="bar-center-line"></div><div class="bar-fill" style="width: ${width}%; left: ${left}; background: ${barColor};"></div><div class="bar-fill-solid" style="width: ${width}%; left: ${left}; background: ${barColor};"></div></div>`;
+        }
+
+        function renderSentimentPanel() {
+            let globalTotal = 0, topicCount = 0;
+            const listContainer = document.getElementById('sentiment-list');
+            listContainer.innerHTML = '';
+            CLUSTERS.forEach(cluster => {
+                let clusterTotal = 0;
+                cluster.subTopics.forEach(s => { clusterTotal += s.score; globalTotal += s.score; topicCount++; });
+                const clusterAvg = clusterTotal / cluster.subTopics.length;
+                const el = document.createElement('div'); el.className = 'sentiment-item';
+                let subsHTML = '';
+                cluster.subTopics.forEach(s => { subsHTML += `<div class="sentiment-sub-item"><div style="display:flex; justify-content:space-between;"><span>${s.label}</span><span>${s.score > 0 ? '+' : ''}${s.score}</span></div>${createSentimentBar(s.score)}</div>`; });
+                el.innerHTML = `<div class="sentiment-head"><div style="display:flex; align-items:center;"><div class="chevron"></div><div style="color:${cluster.color}; font-weight:600;">${cluster.label}</div></div><div>${clusterAvg.toFixed(2)}</div></div>${createSentimentBar(clusterAvg)}<div class="sentiment-details">${subsHTML}</div>`;
+                el.addEventListener('click', () => el.classList.toggle('active'));
+                listContainer.appendChild(el);
+            });
+            const globalAvg = globalTotal / topicCount;
+            document.getElementById('global-bar-container').innerHTML = createSentimentBar(globalAvg);
+            const globalText = document.getElementById('global-sentiment-text');
+            if(globalAvg < -0.3) { globalText.innerText = "Deutlich Negativ"; globalText.style.color = "var(--sentiment-neg)"; }
+            else if(globalAvg < 0) { globalText.innerText = "Leicht Negativ"; globalText.style.color = "#fca5a5"; }
+            else if(globalAvg > 0.3) { globalText.innerText = "Deutlich Positiv"; globalText.style.color = "var(--sentiment-pos)"; }
+            else { globalText.innerText = "Neutral / Gemischt"; globalText.style.color = "#fde047"; }
+            document.getElementById('global-sentiment-score').innerText = "Gesamt-Score: " + globalAvg.toFixed(2);
+        }
+
+        function generateSparkPoints(trend) {
+            if(trend === 'up') return "0,20 10,15 20,18 30,10 40,12 50,5 60,0";
+            if(trend === 'down') return "0,5 10,8 20,5 30,12 40,15 50,18 60,20";
+            return "0,10 10,5 20,15 30,5 40,15 50,8 60,10";
+        }
+
+        // --- WEBGL LOGIC ---
+        let scene, camera, renderer, particlesMesh;
+        let hudCanvas, hudCtx;
+        let width, height;
+        let targetZoom = 1.0, currentZoom = 1.0;
+        let panX = 0, panY = 0, isDragging = false, lastMouseX = 0, lastMouseY = 0;
+        let lastTouchDist = 0; 
+        let hitRegions = []; 
+
+        const PARTICLE_COUNT = 3000, particleData = []; 
+
+        function init() {
+            renderSentimentPanel(); 
+            renderNarrativeList(); 
+            renderCenterList(); 
+            
+            if (typeof THREE === 'undefined') {
+                document.getElementById('cluster-readout').innerText = "3D Engine Offline";
+                return;
+            }
+
+            try {
+                const container = document.getElementById('scatterContainer');
+                width = container.clientWidth; height = container.clientHeight;
+                const canvas3D = document.getElementById('webgl-canvas');
+                scene = new THREE.Scene(); 
+                scene.fog = new THREE.FogExp2(0x0f172a, 0.012);
+                camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000); camera.position.z = 80;
+                renderer = new THREE.WebGLRenderer({ canvas: canvas3D, alpha: true, antialias: true });
+                renderer.setSize(width, height); renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                hudCanvas = document.getElementById('hud-canvas'); hudCtx = hudCanvas.getContext('2d');
+                hudCanvas.width = width; hudCanvas.height = height;
+                generateParticles();
+                
+                const interactionLayer = document.getElementById('interaction-layer');
+                let startX, startY;
+
+                interactionLayer.addEventListener('mousedown', e => { 
+                    isDragging = true; lastMouseX = e.clientX; lastMouseY = e.clientY; 
+                    startX = e.clientX; startY = e.clientY;
+                });
+                
+                window.addEventListener('mouseup', (e) => { 
+                    isDragging = false;
+                    const dist = Math.sqrt(Math.pow(e.clientX - startX, 2) + Math.pow(e.clientY - startY, 2));
+                    if(dist < 5 && e.target === interactionLayer) {
+                        checkCanvasClick(e.offsetX, e.offsetY);
+                    }
+                });
+
+                window.addEventListener('mousemove', e => {
+                    if(!isDragging) {
+                        const rect = interactionLayer.getBoundingClientRect();
+                        const hx = e.clientX - rect.left;
+                        const hy = e.clientY - rect.top;
+                        let hit = false;
+                        for(let r of hitRegions) {
+                            if(hx >= r.x && hx <= r.x + r.w && hy >= r.y && hy <= r.y + r.h) { hit = true; break; }
+                        }
+                        interactionLayer.style.cursor = hit ? 'pointer' : (isDragging ? 'grabbing' : 'grab');
+                        return;
+                    }
+                    panX -= (e.clientX - lastMouseX) * 0.08; panY -= (e.clientY - lastMouseY) * 0.08; lastMouseX = e.clientX; lastMouseY = e.clientY;
+                });
+
+                // --- RESTORED PINCH TO ZOOM ---
+                interactionLayer.addEventListener('touchstart', e => { 
+                    if(e.touches.length === 1) {
+                        isDragging = true; lastMouseX = e.touches[0].clientX; lastMouseY = e.touches[0].clientY; 
+                    } else if(e.touches.length === 2) {
+                        isDragging = false; 
+                        const dx = e.touches[0].clientX - e.touches[1].clientX;
+                        const dy = e.touches[0].clientY - e.touches[1].clientY;
+                        lastTouchDist = Math.sqrt(dx*dx + dy*dy);
+                    }
+                }, {passive: false});
+
+                interactionLayer.addEventListener('touchmove', e => {
+                    if(e.target === interactionLayer) e.preventDefault();
+                    
+                    if(e.touches.length === 1 && isDragging) {
+                        const dx = e.touches[0].clientX - lastMouseX;
+                        const dy = e.touches[0].clientY - lastMouseY;
+                        // INCREASED SENSITIVITY HERE
+                        panX -= dx * 0.25; panY -= dy * 0.25; 
+                        lastMouseX = e.touches[0].clientX; lastMouseY = e.touches[0].clientY; 
+                    } else if(e.touches.length === 2) {
+                        const dx = e.touches[0].clientX - e.touches[1].clientX;
+                        const dy = e.touches[0].clientY - e.touches[1].clientY;
+                        const dist = Math.sqrt(dx*dx + dy*dy);
+                        
+                        if(lastTouchDist > 0) {
+                            const delta = dist - lastTouchDist;
+                            targetZoom += delta * 0.01;
+                            targetZoom = Math.max(0.5, Math.min(3.5, targetZoom));
+                            document.getElementById('zoomSlider').value = targetZoom;
+                            updateReadout();
+                        }
+                        lastTouchDist = dist;
+                    }
+                }, {passive: false});
+
+                interactionLayer.addEventListener('touchend', () => {
+                   isDragging = false; lastTouchDist = 0; 
+                });
+
+                interactionLayer.addEventListener('wheel', e => {
+                    e.preventDefault(); targetZoom += (e.deltaY * -0.0008); targetZoom = Math.max(0.5, Math.min(3.5, targetZoom));
+                    document.getElementById('zoomSlider').value = targetZoom; updateReadout();
+                }, {passive:false});
+                
+                document.getElementById('zoomSlider').addEventListener('input', e => { targetZoom = parseFloat(e.target.value); updateReadout(); });
+                window.addEventListener('resize', onWindowResize);
+                animate();
+            } catch (e) {
+                console.error("Three.js init failed", e);
+            }
+        }
+
+        function checkCanvasClick(mx, my) {
+            for (let i = hitRegions.length - 1; i >= 0; i--) {
+                const r = hitRegions[i];
+                if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) {
+                    openModalComplex(r.data);
+                    return;
+                }
+            }
+        }
+
+        function getSphericalOffset(scale) {
+            const u = Math.random(); const v = Math.random();
+            const theta = 2 * Math.PI * u; const phi = Math.acos(2 * v - 1);
+            const r = Math.pow(Math.random(), 1.5) * scale; 
+            const x = r * Math.sin(phi) * Math.cos(theta);
+            const y = r * Math.sin(phi) * Math.sin(theta);
+            const z = r * Math.cos(phi);
+            return {x, y, z};
+        }
+
+        function generateParticles() {
+            const geometry = new THREE.BufferGeometry();
+            const positions = [], colors = [], sizes = [];
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                const cIdx = i % CLUSTERS.length, c = CLUSTERS[cIdx];
+                const sIdx = Math.floor(Math.random() * c.subTopics.length), s = c.subTopics[sIdx];
+                const mIdx = Math.floor(Math.random() * s.micro.length), m = s.micro[mIdx];
+                const l1 = getSphericalOffset(22); const l2 = getSphericalOffset(9); const l3 = getSphericalOffset(3.5);
+                particleData.push({ cIdx, sIdx, mIdx, l1x: l1.x, l1y: l1.y, l1z: l1.z, l2x: l2.x, l2y: l2.y, l2z: l2.z, l3x: l3.x, l3y: l3.y, l3z: l3.z, cArr: c, sArr: s, mArr: m });
+                positions.push(0,0,0);
+                const col = new THREE.Color(c.color); if(Math.random()>0.8) col.setHSL(Math.random(),1.0,0.8);
+                colors.push(col.r, col.g, col.b); sizes.push(Math.random()*0.5+0.5);
+            }
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
+            const material = new THREE.ShaderMaterial({
+                uniforms: { pointTexture: { value: createCircleTexture() } },
+                vertexShader: `attribute float size; attribute vec3 color; varying vec3 vColor; void main() { vColor = color; vec4 mvPosition = modelViewMatrix * vec4(position, 1.0); gl_PointSize = size * (650.0 / -mvPosition.z); gl_Position = projectionMatrix * mvPosition; }`,
+                fragmentShader: `uniform sampler2D pointTexture; varying vec3 vColor; void main() { gl_FragColor = vec4(vColor, 0.85) * texture2D(pointTexture, gl_PointCoord); }`,
+                blending: THREE.AdditiveBlending, depthTest: false, transparent: true
+            });
+            particlesMesh = new THREE.Points(geometry, material); scene.add(particlesMesh);
+        }
+        function createCircleTexture() {
+            const c = document.createElement('canvas'); c.width=64; c.height=64; const ctx=c.getContext('2d');
+            const g = ctx.createRadialGradient(32,32,0,32,32,32); g.addColorStop(0,'rgba(255,255,255,0.5)'); g.addColorStop(0.3,'rgba(255,255,255,0.2)'); g.addColorStop(1,'rgba(0,0,0,0)');
+            ctx.fillStyle=g; ctx.fillRect(0,0,64,64); return new THREE.CanvasTexture(c);
+        }
+        function onWindowResize() {
+            const c = document.getElementById('scatterContainer'); width = c.clientWidth; height = c.clientHeight;
+            camera.aspect = width/height; camera.updateProjectionMatrix(); renderer.setSize(width, height);
+            hudCanvas.width = width; hudCanvas.height = height;
+        }
+        function lerp(s, e, t) { return s * (1 - t) + e * t; }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            currentZoom += (targetZoom - currentZoom) * 0.25;
+            camera.position.x += (panX - camera.position.x) * 0.25;
+            camera.position.y += (-panY - camera.position.y) * 0.25;
+            camera.position.z += ((120/currentZoom) - camera.position.z) * 0.25;
+            
+            if(particlesMesh) {
+                particlesMesh.rotation.y = Math.sin(Date.now() * 0.0001) * 0.1; 
+            }
+
+            let s1 = (currentZoom - 1.2) / 0.6; if(s1<0)s1=0; if(s1>1)s1=1;
+            s1 = s1 < 0.5 ? 2 * s1 * s1 : 1 - Math.pow(-2 * s1 + 2, 2) / 2;
+            
+            let s2 = (currentZoom - 2.2) / 0.6; if(s2<0)s2=0; if(s2>1)s2=1;
+            s2 = s2 < 0.5 ? 2 * s2 * s2 : 1 - Math.pow(-2 * s2 + 2, 2) / 2;
+
+            const pos = particlesMesh.geometry.attributes.position.array;
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                const p = particleData[i];
+                
+                const l1X = p.cArr.x + p.l1x; const l1Y = p.cArr.y + p.l1y; const l1Z = p.l1z;
+                const l2X = p.cArr.x + p.sArr.offX + p.l2x; const l2Y = p.cArr.y + p.sArr.offY + p.l2y; const l2Z = p.l2z;
+                const l3X = p.cArr.x + p.sArr.offX + p.mArr.offX + p.l3x; const l3Y = p.cArr.y + p.sArr.offY + p.mArr.offY + p.l3y; const l3Z = p.l3z;
+
+                const arc1 = Math.sin(s1 * Math.PI) * 5; 
+                const arc2 = Math.sin(s2 * Math.PI) * 2; 
+
+                let cx = lerp(l1X, l2X, s1); let cy = lerp(l1Y, l2Y, s1); let cz = lerp(l1Z, l2Z, s1) + arc1;
+
+                if(s2 > 0) {
+                    cx = lerp(cx, l3X, s2); cy = lerp(cy, l3Y, s2); cz = lerp(cz, l3Z, s2) + arc2;
+                }
+                pos[i*3] = cx; pos[i*3+1] = cy; pos[i*3+2] = cz;
+            }
+            particlesMesh.geometry.attributes.position.needsUpdate = true;
+            renderer.render(scene, camera); drawHUD(s1, s2);
+        }
+
+        function drawHUD(s1, s2) {
+            hudCtx.clearRect(0, 0, width, height);
+            hitRegions = []; // Reset hit regions every frame
+
+            hudCtx.strokeStyle = "rgba(255, 255, 255, 0.03)"; hudCtx.lineWidth = 1;
+            const gs = 100 * currentZoom, ox = (panX*20)%gs, oy = (-panY*20)%gs;
+            hudCtx.beginPath();
+            for(let x=ox; x<width; x+=gs){ hudCtx.moveTo(x,0); hudCtx.lineTo(x,height); }
+            for(let y=oy; y<height; y+=gs){ hudCtx.moveTo(0,y); hudCtx.lineTo(width,y); }
+            hudCtx.stroke();
+            
+            CLUSTERS.forEach(c => {
+                const v = new THREE.Vector3(c.x, c.y, 0); v.project(camera);
+                const sx = (v.x * 0.5 + 0.5) * width, sy = (-(v.y * 0.5) + 0.5) * height;
+                if(v.z > 1 || v.z < -1) return;
+                
+                // DATA PREP FOR CLUSTER (Inheritance)
+                let totalScore = 0; c.subTopics.forEach(s => totalScore += s.score);
+                let avgScore = parseFloat((totalScore / c.subTopics.length).toFixed(2));
+                const clusterData = { title: c.label, text: c.reportText, type: "Cluster Brief", score: avgScore, sources: c.subTopics[0].sources, clusterColor: c.color };
+
+                // Draw Cluster Label
+                if(s1 < 1.0) {
+                    hudCtx.globalAlpha = 1-s1; hudCtx.fillStyle = c.color; hudCtx.textAlign = "center";
+                    hudCtx.font = "600 14px 'Inter'"; 
+                    hudCtx.fillText(c.label, sx, sy-30);
+                    
+                    // FIXED HIT REGION: Moved UP to align with text
+                    const m = hudCtx.measureText(c.label);
+                    hitRegions.push({ x: sx - m.width/2 - 10, y: sy-45, w: m.width+20, h: 30, data: clusterData });
+                }
+                
+                if(s1 > 0.01) {
+                    c.subTopics.forEach(sub => {
+                        const vs = new THREE.Vector3(c.x+sub.offX, c.y+sub.offY, 0); vs.project(camera);
+                        const ssx = (vs.x*0.5+0.5)*width, ssy = (-(vs.y*0.5)+0.5)*height;
+                        let a = s1; if(s2>0) a = s1*(1-s2*0.6);
+                        
+                        hudCtx.globalAlpha = a * 0.5; 
+                        hudCtx.strokeStyle = c.color;
+                        hudCtx.lineWidth = 0.5; 
+                        hudCtx.beginPath(); hudCtx.moveTo(sx,sy); hudCtx.lineTo(ssx,ssy); hudCtx.stroke();
+
+                        // Sub-Cluster Logic
+                        if(s2 < 0.8) {
+                            hudCtx.font = "500 12px 'Inter'"; 
+                            const tw = hudCtx.measureText(sub.label).width;
+                            const pad = 8; const boxX = ssx - tw/2 - pad; const boxY = ssy + 8; const boxH = 22;
+                            hudCtx.shadowColor = "rgba(0,0,0,0.3)"; hudCtx.shadowBlur = 4;
+                            hudCtx.fillStyle = "rgba(30, 41, 59, 0.9)"; 
+                            hudCtx.fillRect(boxX, boxY, tw + (pad*2), boxH);
+                            hudCtx.fillStyle = c.color; hudCtx.fillRect(boxX, boxY + boxH - 2, tw + (pad*2), 2); 
+                            hudCtx.shadowBlur = 0; hudCtx.fillStyle = "#fff"; hudCtx.textAlign = "center"; 
+                            hudCtx.fillText(sub.label, ssx, boxY + 15);
+                            
+                            const subData = { title: sub.label, text: sub.explanation, type: "Sub-Cluster Brief", score: sub.score, sources: sub.sources, clusterColor: c.color };
+                            hitRegions.push({ x: boxX, y: boxY, w: tw + (pad*2), h: boxH, data: subData });
+                        }
+                        
+                        // Micro Logic
+                        if(s2 > 0.01) {
+                            sub.micro.forEach(mic => {
+                                const vm = new THREE.Vector3(c.x+sub.offX+mic.offX, c.y+sub.offY+mic.offY, 0); vm.project(camera);
+                                const msx = (vm.x*0.5+0.5)*width, msy = (-(vm.y*0.5)+0.5)*height;
+                                
+                                hudCtx.globalAlpha = s2 * 0.4; 
+                                hudCtx.strokeStyle = c.color;
+                                hudCtx.lineWidth = 0.5;
+                                hudCtx.beginPath(); hudCtx.moveTo(ssx,ssy); hudCtx.lineTo(msx,msy); hudCtx.stroke();
+                                
+                                hudCtx.globalAlpha = s2;
+                                hudCtx.font = "400 10px 'JetBrains Mono'"; 
+                                const mtw = hudCtx.measureText(mic.label).width;
+                                const mx = msx + 4, my = msy - 7, mw = mtw + 4, mh = 14;
+
+                                hudCtx.fillStyle = "rgba(15, 23, 42, 0.8)";
+                                hudCtx.fillRect(mx, my, mw, mh);
+                                hudCtx.fillStyle="#cbd5e1"; hudCtx.textAlign="left"; hudCtx.fillText(mic.label, msx+6, msy+4);
+
+                                const micData = { title: mic.label, text: mic.desc, type: "Micro-Narrative", score: sub.score, sources: sub.sources, clusterColor: c.color };
+                                hitRegions.push({ x: mx, y: my, w: mw, h: mh, data: micData });
+                            });
+                        }
+                    });
+                }
+                hudCtx.globalAlpha = 1.0;
+            });
+        }
+        function adjustZoom(d) { let v = parseFloat(document.getElementById('zoomSlider').value)+d; v=Math.max(0.5,Math.min(3.5,v)); document.getElementById('zoomSlider').value=v; targetZoom=v; updateReadout(); }
+        function updateReadout() { document.getElementById('zoomValue').innerText = targetZoom.toFixed(1)+"x"; document.getElementById('cluster-readout').innerText = targetZoom<1.3?"Zoom: Macro":(targetZoom<2.3?"Zoom: Sub-Cluster":"Zoom: Micro"); }
+        
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
