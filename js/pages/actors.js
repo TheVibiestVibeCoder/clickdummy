@@ -27,7 +27,7 @@ export function renderActors(container) {
           <span class="panel__title">Actor Constellation</span>
           <span id="actor-graph-meta" style="font-size:var(--text-xs); color:var(--text-secondary); font-family:var(--font-mono);">Overview: weighted influence map</span>
         </div>
-        <canvas id="actor-canvas" style="width:100%; height:100%; background:radial-gradient(circle at 50% 45%, rgba(10,132,255,0.08) 0%, rgba(10,132,255,0.02) 42%, rgba(10,132,255,0) 76%);"></canvas>
+        <canvas id="actor-canvas" style="width:100%; height:100%; background:radial-gradient(circle at 50% 45%, rgba(255,153,102,0.12) 0%, rgba(255,153,102,0.04) 42%, rgba(255,153,102,0) 76%);"></canvas>
       </div>
 
       <div style="display:flex; flex-direction:column; gap:var(--sp-16); overflow-y:auto;">
@@ -78,7 +78,7 @@ export function renderActors(container) {
 
     openSideSheet({
       title: actor.name,
-      text: `${actor.role} mit einer Reichweite von ${actor.reach} Nutzern. Aktiv in den Clustern ${CLUSTERS.map(c => c.label).join(', ')}. Stärkste Verbindungen: ${related}.`,
+      text: `${actor.role} mit einer Reichweite von ${actor.reach} Nutzern. Aktiv in den Clustern ${CLUSTERS.map(c => c.label).join(', ')}. Staerkste Verbindungen: ${related}.`,
       type: 'Actor Detail',
       score: -0.2,
       sources: [],
@@ -385,13 +385,13 @@ function drawBackground(ctx, state) {
   ctx.clearRect(0, 0, w, h);
 
   const g = ctx.createRadialGradient(centerX, centerY, 10, centerX, centerY, Math.min(w, h) * 0.62);
-  g.addColorStop(0, 'rgba(10,132,255,0.09)');
-  g.addColorStop(0.45, 'rgba(10,132,255,0.04)');
-  g.addColorStop(1, 'rgba(10,132,255,0)');
+  g.addColorStop(0, 'rgba(255,153,102,0.13)');
+  g.addColorStop(0.45, 'rgba(255,153,102,0.05)');
+  g.addColorStop(1, 'rgba(255,153,102,0)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
 
-  ctx.strokeStyle = 'rgba(17,24,39,0.06)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
   ctx.lineWidth = 1;
   for (let i = 1; i <= 4; i++) {
     const radius = (Math.min(w, h) * 0.14) + i * (Math.min(w, h) * 0.075);
@@ -423,7 +423,7 @@ function drawConnectionCurves(ctx, state, connections) {
     ctx.beginPath();
     ctx.moveTo(from.x, from.y);
     ctx.quadraticCurveTo(ctrlX, ctrlY, to.x, to.y);
-    ctx.strokeStyle = `rgba(17,24,39,${alpha.toFixed(3)})`;
+    ctx.strokeStyle = `rgba(255,255,255,${(alpha * 0.75).toFixed(3)})`;
     ctx.lineWidth = width;
     ctx.stroke();
   });
@@ -478,12 +478,12 @@ function drawAnchors(ctx, state, actors, normalizeReach) {
 
     ctx.beginPath();
     ctx.arc(anchor.x, anchor.y, anchor.nodeRadius + 3.4, 0, Math.PI * 2);
-    ctx.fillStyle = dimmed ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.92)';
+    ctx.fillStyle = dimmed ? 'rgba(255,255,255,0.36)' : 'rgba(255,255,255,0.86)';
     ctx.fill();
 
     ctx.beginPath();
     ctx.arc(anchor.x, anchor.y, anchor.nodeRadius, 0, Math.PI * 2);
-    ctx.fillStyle = dimmed ? 'rgba(17,24,39,0.36)' : actor.color;
+    ctx.fillStyle = dimmed ? 'rgba(255,255,255,0.2)' : actor.color;
     ctx.fill();
 
     const tx = anchor.x + Math.cos(anchor.angle) * (24 + reachNorm * 12);
@@ -492,11 +492,11 @@ function drawAnchors(ctx, state, actors, normalizeReach) {
     ctx.font = isActive ? '700 12px Manrope' : '600 11px Manrope';
     ctx.textAlign = tx < anchor.x ? 'right' : 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = dimmed ? 'rgba(82,96,120,0.5)' : 'rgba(17,24,39,0.84)';
+    ctx.fillStyle = dimmed ? 'rgba(169,179,195,0.44)' : 'rgba(244,247,251,0.92)';
     ctx.fillText(actor.name, tx, ty - 4);
 
     ctx.font = '400 10px "IBM Plex Mono"';
-    ctx.fillStyle = dimmed ? 'rgba(82,96,120,0.44)' : 'rgba(82,96,120,0.76)';
+    ctx.fillStyle = dimmed ? 'rgba(127,138,156,0.5)' : 'rgba(169,179,195,0.86)';
     ctx.fillText(actor.reach, tx, ty + 10);
   });
 }

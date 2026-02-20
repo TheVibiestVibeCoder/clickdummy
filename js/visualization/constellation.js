@@ -52,7 +52,7 @@ export function initConstellation(containerEl) {
       <div id="interaction-layer" style="position:absolute;inset:0;z-index:3;cursor:grab;"></div>
     </div>
 
-    <div id="list-layer" class="list-layer" style="position:absolute; inset:0; top:48px; opacity:0; pointer-events:none; z-index:0; overflow-y:auto; padding:var(--sp-16); background:rgba(248,251,255,0.95);"></div>
+    <div id="list-layer" class="list-layer" style="position:absolute; inset:0; top:48px; opacity:0; pointer-events:none; z-index:0; overflow-y:auto; padding:var(--sp-16); background:rgba(8,10,13,0.9);"></div>
   `;
 
   // Set up refs

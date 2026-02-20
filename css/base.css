@@ -21,9 +21,9 @@ body {
   color: var(--text-primary);
   background-color: var(--surface-base);
   background-image:
-    radial-gradient(circle at 15% -20%, rgba(10, 132, 255, 0.16) 0%, rgba(10, 132, 255, 0) 40%),
-    radial-gradient(circle at 95% 5%, rgba(17, 24, 39, 0.06) 0%, rgba(17, 24, 39, 0) 34%),
-    linear-gradient(180deg, #f8fbff 0%, #f4f7fb 100%);
+    radial-gradient(circle at 12% -20%, rgba(255, 153, 102, 0.22) 0%, rgba(255, 153, 102, 0) 42%),
+    radial-gradient(circle at 92% 6%, rgba(255, 153, 102, 0.08) 0%, rgba(255, 153, 102, 0) 38%),
+    linear-gradient(180deg, #0a0c10 0%, #050607 100%);
   background-repeat: no-repeat;
   background-attachment: fixed;
   min-height: 100vh;
@@ -40,8 +40,8 @@ body::after {
   z-index: 9999;
   background-image: var(--noise-url);
   background-repeat: repeat;
-  opacity: 0.22;
-  mix-blend-mode: normal;
+  opacity: 0.2;
+  mix-blend-mode: soft-light;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -103,23 +103,23 @@ a:hover {
 }
 
 ::selection {
-  background: rgba(10, 132, 255, 0.2);
-  color: #04152b;
+  background: rgba(255, 153, 102, 0.25);
+  color: #fff;
 }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(82, 96, 120, 0.35);
+  background: rgba(169, 179, 195, 0.35);
   border-radius: var(--radius-full);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(82, 96, 120, 0.55);
+  background: rgba(169, 179, 195, 0.52);
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(82, 96, 120, 0.4) transparent;
+  scrollbar-color: rgba(169, 179, 195, 0.4) transparent;
 }
 
 :focus-visible {

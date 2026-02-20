@@ -147,8 +147,8 @@ export function showToast(message, duration = 3000) {
 /* ── Pulse glow on element ── */
 export function pulseGlow(element) {
   element.animate([
-    { boxShadow: '0 0 0 0 rgba(10, 132, 255, 0.4)' },
-    { boxShadow: '0 0 0 12px rgba(10, 132, 255, 0)' }
+    { boxShadow: '0 0 0 0 rgba(255, 153, 102, 0.42)' },
+    { boxShadow: '0 0 0 12px rgba(255, 153, 102, 0)' }
   ], {
     duration: getDuration(800),
     easing: EASE.out

@@ -4,7 +4,9 @@
 
 .panel {
   position: relative;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.88));
+  background:
+    linear-gradient(170deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01)),
+    var(--surface-overlay);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   padding: var(--sp-24);
@@ -22,7 +24,7 @@
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0));
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
@@ -89,7 +91,7 @@
 }
 
 .narrative-card:hover {
-  background: rgba(10, 132, 255, 0.04);
+  background: var(--accent-dim);
 }
 
 .narrative-card:last-child {
@@ -202,19 +204,19 @@
 
 .btn--primary {
   background: var(--accent);
-  color: #ffffff;
+  color: #2a1308;
   border-color: var(--accent);
-  box-shadow: 0 10px 20px rgba(10, 132, 255, 0.2);
+  box-shadow: 0 10px 20px rgba(255, 153, 102, 0.26);
 }
 
 .btn--primary:hover {
   background: var(--accent-light);
   border-color: var(--accent-light);
-  box-shadow: 0 12px 24px rgba(10, 132, 255, 0.24);
+  box-shadow: 0 12px 24px rgba(255, 153, 102, 0.3);
 }
 
 .btn--ghost {
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--text-secondary);
   border-color: var(--border-default);
 }
@@ -222,7 +224,7 @@
 .btn--ghost:hover {
   color: var(--text-primary);
   border-color: var(--border-strong);
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .btn--sm {
@@ -232,7 +234,7 @@
 
 .pill-group {
   display: inline-flex;
-  background: rgba(17, 24, 39, 0.04);
+  background: rgba(255, 255, 255, 0.06);
   border-radius: var(--radius-sm);
   padding: 3px;
   gap: 2px;
@@ -256,7 +258,7 @@
 }
 
 .pill.is-active {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.14);
   color: var(--accent);
   box-shadow: var(--shadow-sm);
 }
@@ -264,7 +266,7 @@
 .sentiment-bar {
   width: 100%;
   height: 5px;
-  background: rgba(17, 24, 39, 0.08);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-full);
   position: relative;
   overflow: hidden;
@@ -276,7 +278,7 @@
   top: 0;
   bottom: 0;
   width: 1px;
-  background: rgba(17, 24, 39, 0.16);
+  background: rgba(255, 255, 255, 0.18);
   z-index: 2;
 }
 
@@ -343,7 +345,7 @@
 .media-bar-track {
   flex: 1;
   height: 3px;
-  background: rgba(17, 24, 39, 0.08);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-full);
   overflow: hidden;
 }
@@ -462,7 +464,7 @@
 }
 
 .report-card:hover {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .report-card--risk {
