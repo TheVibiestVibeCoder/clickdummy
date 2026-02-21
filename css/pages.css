@@ -157,13 +157,17 @@
   background: var(--surface-muted);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  min-height: 156px;
 }
 
 .nri-subscore__label-wrap {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--sp-8);
+  min-height: 36px;
 }
 
 .nri-subscore__label {
@@ -172,7 +176,8 @@
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: var(--tracking-wide);
-  margin-bottom: var(--sp-8);
+  margin-bottom: 0;
+  line-height: 1.28;
 }
 
 .nri-subscore__value {
@@ -180,6 +185,8 @@
   font-weight: 700;
   font-size: var(--text-xl);
   letter-spacing: var(--tracking-tight);
+  margin-top: auto;
+  line-height: 1;
 }
 
 .nri-subscore__bar {
@@ -803,26 +810,13 @@
   border: none;
 }
 
-.zoom-strip__value {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  color: #ffc8a8;
-  width: 38px;
-  font-weight: 600;
-  text-align: right;
-}
-
-#constellation-container[data-zoom-stage="macro"] .zoom-strip__label { color: rgba(212, 222, 236, 0.9); }
-#constellation-container[data-zoom-stage="sub"] .zoom-strip__label { color: rgba(255, 198, 168, 0.92); }
-#constellation-container[data-zoom-stage="micro"] .zoom-strip__label { color: rgba(255, 170, 127, 0.96); }
-
 .zoom-strip--constellation {
   margin-left: auto;
-  flex: 0 1 380px;
-  max-width: min(380px, calc(100vw - 420px));
-  min-width: 210px;
-  gap: var(--sp-16);
-  padding: 10px 17px 14px;
+  flex: 0 0 auto;
+  max-width: min(240px, calc(100vw - 420px));
+  min-width: 150px;
+  gap: var(--sp-8);
+  padding: 5px 8px;
   background:
     linear-gradient(165deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.003)),
     rgba(8, 11, 15, 0.2);
@@ -840,37 +834,21 @@
 }
 
 .zoom-strip--constellation .zoom-strip__track-wrap {
-  width: clamp(170px, 22vw, 236px);
-  margin: 0 var(--sp-10);
-  padding-top: 10px;
-  padding-bottom: 6px;
-}
-
-.zoom-strip--constellation .zoom-strip__label,
-.zoom-strip--constellation .zoom-strip__value {
-  opacity: 0.3;
-  font-size: 0.54rem;
+  width: clamp(96px, 12vw, 150px);
+  margin: 0;
+  padding: 0;
 }
 
 .zoom-strip--constellation .zoom-strip__btn {
-  width: 17px;
-  height: 17px;
-  opacity: 0.34;
+  width: 16px;
+  height: 16px;
+  opacity: 0.42;
   background: rgba(255, 255, 255, 0.015);
+  font-size: 0.78rem;
 }
 
 .zoom-strip--constellation .zoom-strip__btn:hover {
-  opacity: 0.58;
-}
-
-.zoom-strip--constellation .zoom-strip__stages {
-  opacity: 0.07;
-}
-
-.zoom-strip--constellation .zoom-strip__stages span {
-  opacity: 0.64;
-  font-size: 0.44rem;
-  letter-spacing: 0.08em;
+  opacity: 0.7;
 }
 
 #constellation-container.is-map-fullscreen .constellation-graph-layer {
@@ -1364,8 +1342,8 @@
 
   .zoom-strip--constellation {
     min-width: 0;
-    max-width: min(260px, calc(100vw - 40px));
-    padding: 6px 9px 9px;
+    max-width: min(190px, calc(100vw - 40px));
+    padding: 4px 7px;
     gap: var(--sp-4);
   }
 
@@ -1374,9 +1352,8 @@
   }
 
   .zoom-strip--constellation .zoom-strip__track-wrap {
-    width: 98px;
-    padding-top: 0;
-    padding-bottom: 4px;
+    width: 84px;
+    padding: 0;
   }
 
   .zoom-strip--constellation .zoom-strip__stages {

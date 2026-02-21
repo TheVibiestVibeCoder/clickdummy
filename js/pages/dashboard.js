@@ -95,7 +95,7 @@ export function renderDashboard(container) {
           <div class="text-metric" id="source-count">0</div>
           <div style="font-size:var(--text-xs); color:var(--text-secondary);">Beitraege/24h</div>
         </div>
-        <div style="margin-top:auto; height:50px; display:flex; align-items:flex-end; gap:3px; padding-top:var(--sp-12); position:relative; z-index:2;">
+        <div style="margin-top:var(--sp-12); flex:1; min-height:120px; display:flex; align-items:flex-end; gap:3px; position:relative; z-index:2;">
           ${[40, 70, 50, 92, 60, 80, 45].map((h, i) => `
             <div style="flex:1; height:${h}%; background:${i === 3 ? 'var(--accent)' : 'var(--ink-600)'}; border-radius:2px 2px 0 0; opacity:${i === 3 ? '1' : '0.4'}; transition: height 0.8s var(--ease-standard) ${i * 80}ms;"></div>
           `).join('')}

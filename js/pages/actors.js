@@ -881,8 +881,13 @@ function drawAnchors(ctx, state, dataset, anchorProvider, alphaMult, activeIndex
     ctx.fill();
 
     const labelOffset = 20 + reachNorm * 11 + (1 - nodeScale) * 5;
-    const tx = anchor.x + Math.cos(anchor.angle) * labelOffset;
-    const ty = anchor.y + Math.sin(anchor.angle) * labelOffset;
+    let vx = anchor.x - state.centerX;
+    let vy = (anchor.y - state.centerY) * 1.08;
+    const vLen = Math.hypot(vx, vy) || 1;
+    vx /= vLen;
+    vy /= vLen;
+    const tx = anchor.x + vx * labelOffset;
+    const ty = anchor.y + vy * labelOffset;
     const showReach = isActive || !dense;
     const showName = isActive || !crowded || (activeIndex != null && !dimmed);
     const displayName = crowded && !isActive ? compactActorName(actor.name) : actor.name;
@@ -891,7 +896,7 @@ function drawAnchors(ctx, state, dataset, anchorProvider, alphaMult, activeIndex
     if (!showName) return;
 
     ctx.font = isActive ? `700 ${(nameSize + 1.1).toFixed(1)}px Manrope` : `600 ${nameSize.toFixed(1)}px Manrope`;
-    ctx.textAlign = tx < anchor.x ? 'right' : 'left';
+    ctx.textAlign = vx < 0 ? 'right' : 'left';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = dimmed
       ? `rgba(169,179,195,${(0.44 * alphaMult).toFixed(3)})`

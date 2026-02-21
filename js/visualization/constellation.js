@@ -81,18 +81,11 @@ export function initConstellation(containerEl) {
         </div>
       </div>
       <div class="zoom-strip zoom-strip--constellation">
-        <span class="zoom-strip__label" id="zoom-readout">Makro</span>
         <button class="zoom-strip__btn" id="zoom-out" aria-label="Rauszoomen">&minus;</button>
         <div class="zoom-strip__track-wrap">
           <input type="range" id="zoom-slider" min="0.35" max="4.8" step="0.01" value="1.0" />
-          <div class="zoom-strip__stages" aria-hidden="true">
-            <span>Makro</span>
-            <span>Sub</span>
-            <span>Mikro</span>
-          </div>
         </div>
         <button class="zoom-strip__btn" id="zoom-in" aria-label="Reinzoomen">+</button>
-        <span class="zoom-strip__value" id="zoom-value">1.0x</span>
       </div>
     </div>
 
@@ -111,8 +104,8 @@ export function initConstellation(containerEl) {
   canvasHUD = container.querySelector('#hud-canvas');
   interactionLayer = container.querySelector('#interaction-layer');
   zoomSlider = container.querySelector('#zoom-slider');
-  zoomValue = container.querySelector('#zoom-value');
-  zoomReadout = container.querySelector('#zoom-readout');
+  zoomValue = null;
+  zoomReadout = null;
   fullscreenBtn = container.querySelector('#map-fullscreen-btn');
   fullscreenVeil = container.querySelector('#map-fs-veil');
 
@@ -145,7 +138,7 @@ export function initConstellation(containerEl) {
   });
 
   if (typeof THREE === 'undefined') {
-    zoomReadout.textContent = '3D-Engine offline';
+    if (zoomReadout) zoomReadout.textContent = '3D-Engine offline';
     return destroyConstellation;
   }
 
@@ -528,18 +521,17 @@ function adjustZoom(delta) {
 }
 
 function updateReadout() {
-  zoomValue.textContent = targetZoom.toFixed(1) + 'x';
+  if (zoomValue) zoomValue.textContent = targetZoom.toFixed(1) + 'x';
 
-  let stage = 'Makro';
   let stageKey = 'macro';
   if (targetZoom >= 2.75) {
-    stage = 'Mikro';
     stageKey = 'micro';
   } else if (targetZoom >= 1.35) {
-    stage = 'Sub-Cluster';
     stageKey = 'sub';
   }
-  zoomReadout.textContent = stage;
+  if (zoomReadout) {
+    zoomReadout.textContent = stageKey === 'micro' ? 'Mikro' : (stageKey === 'sub' ? 'Sub-Cluster' : 'Makro');
+  }
   container.setAttribute('data-zoom-stage', stageKey);
 }
 
@@ -613,15 +605,26 @@ function buildClusterNriMap() {
   const overallNri = typeof NRI?.score === 'number' ? NRI.score : 67;
   const entries = CLUSTERS.map(cluster => {
     const weight = Math.max(1, cluster.subTopics.length);
-    return { cluster, avg: getClusterAvgScore(cluster), weight };
+    const avg = getClusterAvgScore(cluster);
+    const riskAdj = cluster.riskLevel === 'red' ? 5.8 : (cluster.riskLevel === 'amber' ? 2.2 : -2.8);
+    return { cluster, avg, weight, riskAdj };
   });
   const totalWeight = entries.reduce((sum, e) => sum + e.weight, 0) || 1;
   const weightedMean = entries.reduce((sum, e) => sum + e.avg * e.weight, 0) / totalWeight;
   const sensitivity = 30;
+  const rawScores = entries.map(entry => {
+    const sentimentRisk = overallNri - (entry.avg - weightedMean) * sensitivity;
+    return {
+      id: entry.cluster.id,
+      weight: entry.weight,
+      raw: sentimentRisk + entry.riskAdj
+    };
+  });
+  const rawWeightedMean = rawScores.reduce((sum, r) => sum + r.raw * r.weight, 0) / totalWeight;
+  const normalizeShift = overallNri - rawWeightedMean;
 
-  entries.forEach(({ cluster, avg }) => {
-    const score = overallNri + (avg - weightedMean) * sensitivity;
-    map.set(cluster.id, score);
+  rawScores.forEach(({ id, raw }) => {
+    map.set(id, raw + normalizeShift);
   });
 
   return map;
