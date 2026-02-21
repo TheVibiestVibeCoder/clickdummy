@@ -612,14 +612,11 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
       const morphArc = Math.sin(blend * Math.PI);
       const coneEnergy = easeInOutSine(clamp((viewBlend - 0.5) / 0.5, 0, 1));
       const extent = Math.max(1, Math.min(state.w, state.h));
-      const travel = extent * 0.065 * morphArc * coneEnergy;
-      const spin = blend * Math.PI * 1.8;
-      const radial = target.angle + spin + (hash01((index + 1) * 227) - 0.5) * 0.9;
+      const lift = extent * 0.028 * morphArc * coneEnergy;
 
-      base.x += Math.cos(radial) * travel;
-      base.y -= travel * (0.5 + hash01((index + 1) * 631) * 0.65);
-      base.nodeRadius *= 1 + morphArc * 0.08 * coneEnergy;
-      base.ringRadius *= 1 + morphArc * 0.12 * coneEnergy;
+      base.y -= lift;
+      base.nodeRadius *= 1 + morphArc * 0.04 * coneEnergy;
+      base.ringRadius *= 1 + morphArc * 0.07 * coneEnergy;
     }
 
     return base;
@@ -640,18 +637,21 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
       };
     }
 
-    const easedBlend = easeInOutSine(viewBlend);
+    const depthBlend = easeInOutSine(viewBlend);
+    const planarBlend = Math.pow(depthBlend, 1.24);
+    const yBlend = Math.pow(depthBlend, 1.34);
     const projected = projectConePoint(coneAnchor);
+    const cinematicLift = Math.sin(depthBlend * Math.PI) * (1 - depthBlend) * Math.min(state.w, state.h) * 0.016;
 
     return {
       ...flatAnchor,
-      x: lerp(flatAnchor.x, projected.x, easedBlend),
-      y: lerp(flatAnchor.y, projected.y, easedBlend),
-      angle: lerp(flatAnchor.angle, coneAnchor.angle, easedBlend),
-      ringRadius: lerp(flatAnchor.ringRadius, coneAnchor.ringRadius, easedBlend),
-      nodeRadius: lerp(flatAnchor.nodeRadius, coneAnchor.nodeRadius, easedBlend),
-      depth: projected.depth * easedBlend,
-      perspective: lerp(1, projected.perspective, easedBlend),
+      x: lerp(flatAnchor.x, projected.x, planarBlend),
+      y: lerp(flatAnchor.y, projected.y, yBlend) - cinematicLift,
+      angle: lerp(flatAnchor.angle, coneAnchor.angle, planarBlend),
+      ringRadius: lerp(flatAnchor.ringRadius, coneAnchor.ringRadius, planarBlend),
+      nodeRadius: lerp(flatAnchor.nodeRadius, coneAnchor.nodeRadius, planarBlend),
+      depth: projected.depth * depthBlend,
+      perspective: lerp(1, projected.perspective, depthBlend),
       coneLevel: coneAnchor.level
     };
   }
@@ -722,7 +722,7 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
     let bestDistSq = Infinity;
 
     state.active.actors.forEach((_, index) => {
-      const flatAnchor = getBlendedActiveAnchor(index, blend);
+      const flatAnchor = getBlendedActiveAnchor(index, blend, viewBlend);
       const anchor = projectAnchorForView(state.active, flatAnchor, index, viewBlend);
       if (!anchor) return;
 
@@ -875,6 +875,9 @@ function buildAnchors(actors, w, h, normalizeReach, nodeScale = 1) {
       x: cx + Math.cos(angle) * radial,
       y: cy + Math.sin(angle) * radial * ySquash,
       angle,
+      radial,
+      ringIndex,
+      ringBaseRadius: baseRing,
       ringRadius: (22 + reachNorm * 50) * (0.86 + nodeScale * 0.22),
       nodeRadius: (4.2 + reachNorm * 9.2) * nodeScale,
       drift: (entry.index + 1) * 0.56 + ringIndex * 0.18
@@ -902,31 +905,37 @@ function buildConeAnchors(actors, flatAnchors, normalizeInfluence, nodeScale = 1
     };
   }
 
+  const radialValues = flatAnchors
+    .filter(Boolean)
+    .map(anchor => Number.isFinite(anchor.radial) ? anchor.radial : 0);
+  const minRadial = radialValues.length ? Math.min(...radialValues) : 0;
+  const maxRadial = radialValues.length ? Math.max(...radialValues) : 1;
+  const radialSpan = Math.max(0, maxRadial - minRadial);
+
   const coneAnchors = new Array(actors.length);
 
   actors.forEach((_, index) => {
     const flat = flatAnchors[index];
     if (!flat) return;
 
-    const influence = clamp(normalizeInfluence(index), 0, 1);
-    const verticalBias = clamp((h * 0.84 - flat.y) / Math.max(1, h * 0.72), 0, 1);
-    const blendedLevel = clamp(influence * 0.72 + verticalBias * 0.28, 0, 1);
-    const snapped = Math.round(blendedLevel * (levelCount - 1)) / Math.max(1, levelCount - 1);
-    const level = clamp(lerp(blendedLevel, snapped, 0.68), 0, 1);
+    const ringLevel = clamp((flat.ringIndex || 0) / Math.max(1, levelCount - 1), 0, 1);
+    const radialLevel = radialSpan > 1e-6
+      ? clamp((flat.radial - minRadial) / radialSpan, 0, 1)
+      : ringLevel;
+    const level = radialLevel;
 
     const radius = lerp(bottomRadius, topRadius, level);
     const y3 = lerp(bottomY, topY, level);
-    const jitter = (hash01((index + 1) * 487) - 0.5) * 0.2 * (1 - level) * 0.8;
-    const angle = flat.angle + jitter;
+    const angle = flat.angle;
 
     coneAnchors[index] = {
       angle,
       level,
       x3: Math.cos(angle) * radius,
       y3,
-      z3: Math.sin(angle) * radius * (0.86 + (1 - level) * 0.22),
-      ringRadius: flat.ringRadius * (0.56 + level * 0.34),
-      nodeRadius: flat.nodeRadius * (0.82 + level * 0.28)
+      z3: Math.sin(angle) * radius * 0.92,
+      ringRadius: flat.ringRadius * (0.62 + level * 0.24),
+      nodeRadius: flat.nodeRadius * (0.88 + level * 0.18)
     };
   });
 
@@ -1331,14 +1340,26 @@ function clamp(v, min, max) {
 function projectConePointFromState(state, point) {
   const extent = Math.max(1, Math.min(state.w, state.h));
   const cameraDistance = extent * 1.74;
-  const depthScale = 0.9;
-  const depthZ = point.z3 * depthScale;
+  const tiltX = -0.22;
+  const yawY = 0.06;
+  const cosTilt = Math.cos(tiltX);
+  const sinTilt = Math.sin(tiltX);
+  const cosYaw = Math.cos(yawY);
+  const sinYaw = Math.sin(yawY);
+
+  const tiltedY = point.y3 * cosTilt - point.z3 * sinTilt;
+  const tiltedZ = point.y3 * sinTilt + point.z3 * cosTilt;
+  const rotatedX = point.x3 * cosYaw + tiltedZ * sinYaw;
+  const rotatedZ = -point.x3 * sinYaw + tiltedZ * cosYaw;
+
+  const depthScale = 0.82;
+  const depthZ = rotatedZ * depthScale;
   const denominator = Math.max(44, cameraDistance - depthZ);
   const perspective = cameraDistance / denominator;
 
   return {
-    x: state.centerX + point.x3 * perspective,
-    y: state.centerY + point.y3 * perspective,
+    x: state.centerX + rotatedX * perspective,
+    y: state.centerY + tiltedY * perspective,
     perspective,
     depth: clamp((depthZ / (extent * 0.54) + 1) * 0.5, 0, 1)
   };
