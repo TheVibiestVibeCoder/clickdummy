@@ -688,43 +688,41 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
 function buildAnchors(actors, w, h, normalizeReach) {
   const cx = w * 0.5;
   const cy = h * 0.54;
-  const baseRadius = Math.min(w, h) * 0.34;
-
-  const groups = {
-    institution: { angle: -2.18, spread: 0.36, actors: [] },
-    media: { angle: -0.34, spread: 0.34, actors: [] },
-    social: { angle: 1.05, spread: 0.42, actors: [] },
-    alt: { angle: 2.24, spread: 0.24, actors: [] }
+  const extent = Math.min(w, h);
+  const ringRadii = [extent * 0.17, extent * 0.24, extent * 0.31, extent * 0.39];
+  const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+  const groupPhase = {
+    institution: -0.72,
+    media: 0.56,
+    social: 1.88,
+    alt: 3.18
   };
-
-  actors.forEach((actor, index) => {
-    const key = actorGroup(actor.role);
-    groups[key].actors.push({ actor, index });
-  });
+  const ranked = actors
+    .map((actor, index) => ({ actor, index, group: actorGroup(actor.role) }))
+    .sort((a, b) => parseReach(b.actor.reach) - parseReach(a.actor.reach));
 
   const anchors = new Array(actors.length);
 
-  Object.values(groups).forEach(group => {
-    group.actors
-      .sort((a, b) => parseReach(b.actor.reach) - parseReach(a.actor.reach))
-      .forEach((entry, localIdx, arr) => {
-        const t = arr.length === 1 ? 0 : (localIdx / (arr.length - 1)) - 0.5;
-        const angle = group.angle + t * group.spread;
-        const reachNorm = normalizeReach(entry.index);
-        const radius = baseRadius * (0.84 + reachNorm * 0.24);
+  ranked.forEach((entry, order) => {
+    const reachNorm = normalizeReach(entry.index);
+    const ringSeed = hash01((entry.index + 1) * 73 + order * 17);
+    const ringIndex = (order + Math.floor(ringSeed * ringRadii.length)) % ringRadii.length;
+    const baseRing = ringRadii[ringIndex];
 
-        const x = cx + Math.cos(angle) * radius;
-        const y = cy + Math.sin(angle) * radius * 0.86;
+    const radialJitter = (hash01((entry.index + 1) * 911 + order * 137) - 0.5) * extent * 0.11;
+    const angleJitter = (hash01((entry.index + 1) * 337 + order * 57) - 0.5) * 1.05;
+    const angle = (order * goldenAngle) + (groupPhase[entry.group] || 0) + angleJitter;
+    const radial = clamp(baseRing + radialJitter + reachNorm * extent * 0.05, extent * 0.14, extent * 0.47);
+    const ySquash = 0.78 + hash01((entry.index + 1) * 271 + order * 7) * 0.2;
 
-        anchors[entry.index] = {
-          x,
-          y,
-          angle,
-          ringRadius: 26 + reachNorm * 44,
-          nodeRadius: 4.4 + reachNorm * 8.6,
-          drift: (entry.index + 1) * 0.6
-        };
-      });
+    anchors[entry.index] = {
+      x: cx + Math.cos(angle) * radial,
+      y: cy + Math.sin(angle) * radial * ySquash,
+      angle,
+      ringRadius: 22 + reachNorm * 50,
+      nodeRadius: 4.2 + reachNorm * 9.2,
+      drift: (entry.index + 1) * 0.56 + ringIndex * 0.18
+    };
   });
 
   return anchors;

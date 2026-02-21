@@ -82,7 +82,6 @@ export function renderDashboard(container) {
           </div>
         </div>
 
-        <div id="nri-info-popover" class="nri-info-popover" hidden></div>
       </div>
 
       <div class="dash-center panel" data-animate style="padding:0; overflow:hidden;" id="constellation-container"></div>
@@ -144,6 +143,26 @@ export function renderDashboard(container) {
         </div>
       </div>
     </div>
+
+    <div class="nri-info-overlay" id="nri-info-overlay" aria-hidden="true">
+      <div class="nri-info-modal" role="dialog" aria-modal="true" aria-labelledby="nri-info-title">
+        <div class="nri-info-modal__header">
+          <div class="panel__title">NRI Metric Explainer</div>
+          <button class="nri-info-modal__close" id="nri-info-close" type="button" aria-label="Close metric explainer">&times;</button>
+        </div>
+        <div class="nri-info-modal__body">
+          <div class="nri-info-modal__title" id="nri-info-title"></div>
+          <div class="nri-info-modal__line">
+            <span>Means</span>
+            <p id="nri-info-means"></p>
+          </div>
+          <div class="nri-info-modal__line">
+            <span>Measures</span>
+            <p id="nri-info-measures"></p>
+          </div>
+        </div>
+      </div>
+    </div>
   `;
 
   animatePageEnter(container);
@@ -183,8 +202,15 @@ export function renderDashboard(container) {
   const trendOverlay = container.querySelector('#nri-trend-overlay');
   const trendBtn = container.querySelector('#nri-trend-btn');
   const trendClose = container.querySelector('#nri-trend-close');
+  const infoOverlay = container.querySelector('#nri-info-overlay');
+  const infoClose = container.querySelector('#nri-info-close');
+  const infoTitleEl = container.querySelector('#nri-info-title');
+  const infoMeansEl = container.querySelector('#nri-info-means');
+  const infoMeasuresEl = container.querySelector('#nri-info-measures');
+  let infoState = null;
 
   const openTrend = () => {
+    closeInfo();
     trendOverlay.classList.add('is-open');
     trendOverlay.setAttribute('aria-hidden', 'false');
   };
@@ -200,19 +226,16 @@ export function renderDashboard(container) {
     if (e.target === trendOverlay) closeTrend();
   });
 
-  const nriPanel = container.querySelector('#nri-panel');
-  const infoPopover = container.querySelector('#nri-info-popover');
-  let infoState = null;
-
   function closeInfo() {
     if (!infoState) return;
     if (infoState.button) infoState.button.classList.remove('is-active');
     infoState = null;
-    infoPopover.classList.remove('is-open');
-    infoPopover.hidden = true;
+    infoOverlay.classList.remove('is-open');
+    infoOverlay.setAttribute('aria-hidden', 'true');
   }
 
   function openInfo(button, key) {
+    closeTrend();
     const info = NRI_INFO[key] || NRI_INFO.overall;
     const sameButton = infoState && infoState.button === button;
     if (sameButton) {
@@ -223,30 +246,12 @@ export function renderDashboard(container) {
     if (infoState?.button) infoState.button.classList.remove('is-active');
     button.classList.add('is-active');
 
-    infoPopover.innerHTML = `
-      <div class="nri-info-popover__title">${info.title}</div>
-      <div class="nri-info-popover__line"><span>Means</span>${info.means}</div>
-      <div class="nri-info-popover__line"><span>Measures</span>${info.measures}</div>
-    `;
+    infoTitleEl.textContent = info.title;
+    infoMeansEl.textContent = info.means;
+    infoMeasuresEl.textContent = info.measures;
 
-    const panelRect = nriPanel.getBoundingClientRect();
-    const btnRect = button.getBoundingClientRect();
-    const popW = Math.min(340, Math.max(220, panelRect.width - 24));
-    const popH = 172;
-
-    let left = btnRect.left - panelRect.left + (btnRect.width * 0.5) - (popW * 0.5);
-    left = clamp(left, 12, Math.max(12, panelRect.width - popW - 12));
-
-    let top = btnRect.bottom - panelRect.top + 10;
-    if (top + popH > panelRect.height - 8) {
-      top = btnRect.top - panelRect.top - popH - 10;
-    }
-    top = Math.max(12, top);
-
-    infoPopover.style.left = `${left}px`;
-    infoPopover.style.top = `${top}px`;
-    infoPopover.hidden = false;
-    infoPopover.classList.add('is-open');
+    infoOverlay.classList.add('is-open');
+    infoOverlay.setAttribute('aria-hidden', 'false');
     infoState = { button, key };
   }
 
@@ -257,14 +262,11 @@ export function renderDashboard(container) {
     });
   });
 
-  bind(document, 'click', (e) => {
-    if (!infoState) return;
-    const target = e.target;
-    if (target instanceof Element && (target.closest('.nri-info-btn') || target.closest('.nri-info-popover'))) return;
-    closeInfo();
+  bind(infoClose, 'click', closeInfo);
+  bind(infoOverlay, 'click', (e) => {
+    if (e.target === infoOverlay) closeInfo();
   });
 
-  bind(window, 'resize', closeInfo);
   bind(document, 'keydown', (e) => {
     if (e.key === 'Escape') {
       closeTrend();
@@ -308,17 +310,18 @@ function renderWarnings(container) {
 }
 
 function buildTrendChartMarkup(data) {
-  const w = 620;
-  const h = 206;
-  const padL = 44;
-  const padR = 22;
-  const padT = 24;
-  const padB = 34;
+  const w = 760;
+  const h = 300;
+  const padL = 52;
+  const padR = 28;
+  const padT = 28;
+  const padB = 56;
   const minScore = Math.min(...data.map(d => d.score));
   const maxScore = Math.max(...data.map(d => d.score));
   const range = Math.max(1, maxScore - minScore);
   const innerW = w - padL - padR;
   const innerH = h - padT - padB;
+  const guideCount = 4;
 
   const points = data.map((item, idx) => {
     const x = padL + ((innerW / Math.max(1, data.length - 1)) * idx);
@@ -327,11 +330,18 @@ function buildTrendChartMarkup(data) {
     return { ...item, x, y };
   });
 
+  const guides = Array.from({ length: guideCount }, (_, i) => {
+    const ratio = i / (guideCount - 1);
+    const value = maxScore - ratio * range;
+    const y = padT + ratio * innerH;
+    return { y, value };
+  });
+
   const line = points.map(p => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ');
   const area = [
-    `${padL},${h - padB}`,
+    `${padL},${padT + innerH}`,
     ...points.map(p => `${p.x.toFixed(2)},${p.y.toFixed(2)}`),
-    `${padL + innerW},${h - padB}`
+    `${padL + innerW},${padT + innerH}`
   ].join(' ');
 
   return `
@@ -343,15 +353,20 @@ function buildTrendChartMarkup(data) {
             <stop offset="100%" stop-color="rgba(255,153,102,0.03)"></stop>
           </linearGradient>
         </defs>
-        <line x1="${padL}" y1="${h - padB}" x2="${w - padR}" y2="${h - padB}" stroke="rgba(255,255,255,0.14)" stroke-width="1"></line>
-        <polygon points="${area}" fill="url(#nri-area-grad)"></polygon>
-        <polyline points="${line}" fill="none" stroke="#ffb28c" stroke-width="2.4" stroke-linecap="round"></polyline>
-        ${points.map(p => `
+        ${guides.map(g => `
           <g>
-            <circle cx="${p.x}" cy="${p.y}" r="4.8" fill="#ff9966"></circle>
-            <circle cx="${p.x}" cy="${p.y}" r="11.4" fill="rgba(255,153,102,0.18)"></circle>
-            <text x="${p.x}" y="${p.y - 12}" text-anchor="middle" fill="#f4f7fb" font-size="11" font-family="var(--font-mono)">${p.score}</text>
-            <text x="${p.x}" y="${h - 10}" text-anchor="middle" fill="#a9b3c3" font-size="10" font-family="var(--font-mono)">${p.label}</text>
+            <line x1="${padL}" y1="${g.y}" x2="${w - padR}" y2="${g.y}" stroke="rgba(255,255,255,0.08)" stroke-width="1"></line>
+            <text x="${padL - 8}" y="${g.y + 3}" text-anchor="end" fill="rgba(169,179,195,0.76)" font-size="10" font-family="var(--font-mono)">${g.value.toFixed(0)}</text>
+          </g>
+        `).join('')}
+        <polygon class="nri-trend-area" points="${area}" fill="url(#nri-area-grad)"></polygon>
+        <polyline class="nri-trend-line" points="${line}" fill="none" stroke="#ffb28c" stroke-width="2.6" stroke-linecap="round"></polyline>
+        ${points.map((p, idx) => `
+          <g class="nri-trend-point" style="--pt-i:${idx};">
+            <circle class="nri-trend-point__halo" cx="${p.x}" cy="${p.y}" r="13" fill="rgba(255,153,102,0.18)"></circle>
+            <circle class="nri-trend-point__dot" cx="${p.x}" cy="${p.y}" r="4.9" fill="#ff9966"></circle>
+            <text class="nri-trend-point__score" x="${p.x}" y="${p.y - 15}" text-anchor="middle" fill="#f4f7fb" font-size="11" font-family="var(--font-mono)">${p.score}</text>
+            <text class="nri-trend-point__label" x="${p.x}" y="${h - 18}" text-anchor="middle" fill="#a9b3c3" font-size="10" font-family="var(--font-mono)">${p.label}</text>
           </g>
         `).join('')}
       </svg>
@@ -383,8 +398,4 @@ function findSubById(subId) {
 function formatSigned(value) {
   const n = Number(value) || 0;
   return `${n >= 0 ? '+' : ''}${n.toFixed(1)}`;
-}
-
-function clamp(v, min, max) {
-  return Math.max(min, Math.min(max, v));
 }
