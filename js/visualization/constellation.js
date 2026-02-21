@@ -7,8 +7,8 @@ import { openClusterSheet, openSubSheet, openMicroSheet } from '../components/si
 
 const VIEW_TOP_OFFSET = 48;
 const PARTICLE_COUNT = 2400;
-const MACRO_RING_X = 34;
-const MACRO_RING_Y = 24;
+const MACRO_RING_X = 42;
+const MACRO_RING_Y = 30;
 
 let scene;
 let camera;
@@ -81,7 +81,7 @@ export function initConstellation(containerEl) {
         <span class="zoom-strip__label" id="zoom-readout">Macro</span>
         <button class="zoom-strip__btn" id="zoom-out" aria-label="Zoom out">&minus;</button>
         <div class="zoom-strip__track-wrap">
-          <input type="range" id="zoom-slider" min="0.5" max="3.5" step="0.01" value="1.0" />
+          <input type="range" id="zoom-slider" min="0.35" max="4.8" step="0.01" value="1.0" />
           <div class="zoom-strip__stages" aria-hidden="true">
             <span>Macro</span>
             <span>Sub</span>
@@ -203,7 +203,7 @@ function generateParticles() {
     const mIdx = Math.floor(Math.random() * sub.micro.length);
     const mic = sub.micro[mIdx];
 
-    const l1 = sphericalOffset(18.5);
+    const l1 = sphericalOffset(24.5);
     const l2 = sphericalOffset(7.4);
     const l3 = sphericalOffset(3.2);
 
@@ -422,7 +422,7 @@ function setupInteraction() {
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (lastTouchDist > 0) {
         targetZoom += (dist - lastTouchDist) * 0.01;
-        targetZoom = clamp(targetZoom, 0.5, 3.5);
+        targetZoom = clamp(targetZoom, 0.35, 4.8);
         zoomSlider.value = targetZoom;
         updateReadout();
       }
@@ -446,7 +446,7 @@ function setupInteraction() {
   bindInteraction(interactionLayer, 'wheel', e => {
     e.preventDefault();
     targetZoom += e.deltaY * -0.0008;
-    targetZoom = clamp(targetZoom, 0.5, 3.5);
+    targetZoom = clamp(targetZoom, 0.35, 4.8);
     zoomSlider.value = targetZoom;
     updateReadout();
   }, passiveFalse);
@@ -463,7 +463,7 @@ function checkClick(mx, my) {
 }
 
 function adjustZoom(delta) {
-  targetZoom = clamp(targetZoom + delta, 0.5, 3.5);
+  targetZoom = clamp(targetZoom + delta, 0.35, 4.8);
   zoomSlider.value = targetZoom;
   updateReadout();
 }
@@ -473,10 +473,10 @@ function updateReadout() {
 
   let stage = 'Macro';
   let stageKey = 'macro';
-  if (targetZoom >= 2.3) {
+  if (targetZoom >= 2.75) {
     stage = 'Micro';
     stageKey = 'micro';
-  } else if (targetZoom >= 1.3) {
+  } else if (targetZoom >= 1.35) {
     stage = 'Sub-Cluster';
     stageKey = 'sub';
   }
@@ -602,13 +602,13 @@ function animate() {
   mouseNormX += (mouseTargetX - mouseNormX) * 0.032;
   mouseNormY += (mouseTargetY - mouseNormY) * 0.032;
 
-  const s1 = smoothStep(1.1, 2.0, currentZoom);
-  const s2 = smoothStep(2.0, 3.15, currentZoom);
+  const s1 = smoothStep(1.0, 2.1, currentZoom);
+  const s2 = smoothStep(2.2, 4.2, currentZoom);
 
   const parallax = lerp(1.8, 1.0, smoothStep(1.2, 3.1, currentZoom));
   const targetCamX = panX + mouseNormX * parallax;
   const targetCamY = -panY - mouseNormY * parallax + s2 * 1.4;
-  const targetCamZ = (118 / currentZoom) - s2 * 8;
+  const targetCamZ = (132 / currentZoom) - s2 * 12;
 
   camera.position.x += (targetCamX - camera.position.x) * 0.085;
   camera.position.y += (targetCamY - camera.position.y) * 0.085;
@@ -622,8 +622,9 @@ function animate() {
   }
 
   const clusterWorld = computeClusterWorldPositions(time, s1);
-  const subSpread = lerp(0.36, 1, s1);
-  const microSpread = lerp(0.32, 1, s2);
+  const subSpread = lerp(0.48, 2.25, s1);
+  const microSpread = lerp(0.4, 3.55, s2);
+  const macroCloudSpread = 0.42 + ent * 0.58;
 
   const pos = particlesMesh.geometry.attributes.position.array;
   for (let i = 0; i < PARTICLE_COUNT; i++) {
@@ -641,9 +642,9 @@ function animate() {
 
     const r1x = p.l1x * cosA - p.l1z * sinA;
     const r1z = p.l1x * sinA + p.l1z * cosA;
-    const l1X = base.x + (r1x + dX) * ent;
-    const l1Y = base.y + (p.l1y + dY) * ent;
-    const l1Z = (r1z + dZ) * ent;
+    const l1X = base.x + (r1x + dX) * macroCloudSpread;
+    const l1Y = base.y + (p.l1y + dY) * macroCloudSpread;
+    const l1Z = (r1z + dZ) * macroCloudSpread;
 
     const r2x = p.l2x * cosA - p.l2z * sinA;
     const r2z = p.l2x * sinA + p.l2z * cosA;
@@ -700,8 +701,8 @@ function drawHUD(s1, s2, time, ent, clusterWorld) {
 
   drawClusterBridges(clusterScreens, time, s1, ent);
 
-  const subSpread = lerp(0.36, 1, s1);
-  const microSpread = lerp(0.32, 1, s2);
+  const subSpread = lerp(0.48, 2.25, s1);
+  const microSpread = lerp(0.4, 3.55, s2);
 
   clusterScreens.forEach(state => {
     if (!state.visible) return;
@@ -714,7 +715,7 @@ function drawHUD(s1, s2, time, ent, clusterWorld) {
     const pulse = 1 + Math.sin(time * 0.72 + ci * 1.85) * 0.1;
     const clusterVis = ent * (1 - s1 * 0.16);
 
-    const outerR = 76 * pulse * (1 - s1 * 0.26);
+    const outerR = 94 * pulse * (1 - s1 * 0.24);
     hudCtx.globalAlpha = clusterVis * 0.18;
     const outer = hudCtx.createRadialGradient(sx, sy, 0, sx, sy, outerR);
     outer.addColorStop(0, hexToRGBA(c.color, 0.35));
@@ -972,19 +973,20 @@ function drawBackdrop(time, s1, s2, ent) {
   hudCtx.fillStyle = shimmer;
   hudCtx.fillRect(0, 0, width, height);
 
-  const holeR = Math.min(width, height) * (0.15 + (1 - s1) * 0.05);
-  hudCtx.globalAlpha = 0.82;
-  hudCtx.fillStyle = 'rgba(4,7,10,0.52)';
-  hudCtx.beginPath();
-  hudCtx.arc(cx, cy, holeR, 0, Math.PI * 2);
-  hudCtx.fill();
-
-  hudCtx.globalAlpha = (1 - s2 * 0.56) * 0.42;
-  hudCtx.strokeStyle = 'rgba(226,232,240,0.16)';
-  hudCtx.lineWidth = 1.2;
-  hudCtx.beginPath();
-  hudCtx.arc(cx, cy, holeR + 3.5, 0, Math.PI * 2);
-  hudCtx.stroke();
+  const centerAura = hudCtx.createRadialGradient(
+    cx,
+    cy,
+    Math.min(width, height) * 0.02,
+    cx,
+    cy,
+    Math.min(width, height) * (0.28 + (1 - s1) * 0.06)
+  );
+  centerAura.addColorStop(0, 'rgba(255, 182, 138, 0.08)');
+  centerAura.addColorStop(0.45, 'rgba(160, 178, 201, 0.035)');
+  centerAura.addColorStop(1, 'transparent');
+  hudCtx.globalAlpha = 0.78 * (1 - s2 * 0.35);
+  hudCtx.fillStyle = centerAura;
+  hudCtx.fillRect(0, 0, width, height);
 
   const vignette = hudCtx.createRadialGradient(cx, cy, width * 0.16, cx, cy, width * 0.78);
   vignette.addColorStop(0, 'transparent');
