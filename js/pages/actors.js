@@ -581,7 +581,7 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
     return blend;
   }
 
-  function getBlendedActiveAnchor(index, blend = getBlend()) {
+  function getBlendedActiveAnchor(index, blend = getBlend(), viewBlend = getViewBlend()) {
     const target = state.active?.anchors[index];
     if (!target) return null;
     if (!state.previous || blend >= 1) return target;
@@ -599,7 +599,7 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
     }
 
     const source = state.previous.anchors[prevIndex];
-    return {
+    const base = {
       ...target,
       x: lerp(source.x, target.x, blend),
       y: lerp(source.y, target.y, blend),
@@ -607,6 +607,22 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
       ringRadius: lerp(source.ringRadius, target.ringRadius, blend),
       nodeRadius: lerp(source.nodeRadius, target.nodeRadius, blend)
     };
+
+    if (viewBlend > 0.56) {
+      const morphArc = Math.sin(blend * Math.PI);
+      const coneEnergy = easeInOutSine(clamp((viewBlend - 0.5) / 0.5, 0, 1));
+      const extent = Math.max(1, Math.min(state.w, state.h));
+      const travel = extent * 0.065 * morphArc * coneEnergy;
+      const spin = blend * Math.PI * 1.8;
+      const radial = target.angle + spin + (hash01((index + 1) * 227) - 0.5) * 0.9;
+
+      base.x += Math.cos(radial) * travel;
+      base.y -= travel * (0.5 + hash01((index + 1) * 631) * 0.65);
+      base.nodeRadius *= 1 + morphArc * 0.08 * coneEnergy;
+      base.ringRadius *= 1 + morphArc * 0.12 * coneEnergy;
+    }
+
+    return base;
   }
 
   function projectConePoint(point) {
@@ -676,7 +692,7 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
       const activeIndex = state.lockedIndex ?? state.focusIndex ?? state.hoverIndex;
       const activeAnchors = buildFrameAnchors(
         state.active,
-        idx => getBlendedActiveAnchor(idx, blend),
+        idx => getBlendedActiveAnchor(idx, blend, viewBlend),
         viewBlend
       );
       const anchorProvider = idx => activeAnchors[idx];
@@ -765,10 +781,12 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
     setData(baseData, options = {}) {
       const runtime = toRuntimeDataset(baseData);
       const shouldAnimate = options.animate !== false && !state.reduced;
+      const viewBlend = getViewBlend();
 
       if (state.active && shouldAnimate) {
         state.previous = state.active;
         state.transitionStart = performance.now();
+        state.transitionDuration = viewBlend > 0.56 ? 1820 : 820;
       } else {
         state.previous = null;
       }
@@ -868,7 +886,7 @@ function buildAnchors(actors, w, h, normalizeReach, nodeScale = 1) {
 
 function buildConeAnchors(actors, flatAnchors, normalizeInfluence, nodeScale = 1, w = 0, h = 0) {
   const extent = Math.max(1, Math.min(w, h));
-  const levelCount = clamp(Math.round(4 + actors.length / 2.8), 4, 8);
+  const levelCount = 4;
   const topRadius = extent * (0.4 + nodeScale * 0.045);
   const bottomRadius = extent * (0.1 + nodeScale * 0.012);
   const topY = -extent * 0.34;
