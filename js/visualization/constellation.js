@@ -5,7 +5,7 @@
    Level-of-detail zoom: Macro → Sub → Micro
    ============================================================ */
 
-import { CLUSTERS, getClusterAvgScore } from '../data.js';
+import { CLUSTERS, getClusterAvgScore, getSentimentColor, sparkPoints } from '../data.js';
 import { openClusterSheet, openSubSheet, openMicroSheet } from '../components/side-sheet.js';
 
 let scene, camera, renderer, particlesMesh;
@@ -69,6 +69,8 @@ export function initConstellation(containerEl) {
   const graphLayer = container.querySelector('#graph-layer');
   const listLayer = container.querySelector('#list-layer');
 
+  const zoomStripEl = container.querySelector('.zoom-strip');
+
   btnGraph.addEventListener('click', () => {
     btnGraph.classList.add('is-active');
     btnList.classList.remove('is-active');
@@ -76,6 +78,7 @@ export function initConstellation(containerEl) {
     graphLayer.style.pointerEvents = 'auto';
     listLayer.style.opacity = '0';
     listLayer.style.pointerEvents = 'none';
+    if (zoomStripEl) zoomStripEl.style.display = '';
     onResize();
   });
 
@@ -86,6 +89,7 @@ export function initConstellation(containerEl) {
     graphLayer.style.pointerEvents = 'none';
     listLayer.style.opacity = '1';
     listLayer.style.pointerEvents = 'auto';
+    if (zoomStripEl) zoomStripEl.style.display = 'none';
     renderListView(listLayer);
   });
 
@@ -616,28 +620,51 @@ function onResize() {
 
 function renderListView(listLayer) {
   listLayer.innerHTML = '';
-  CLUSTERS.forEach(c => {
-    const group = document.createElement('div');
-    group.style.marginBottom = 'var(--sp-24)';
 
-    const header = document.createElement('div');
-    header.style.cssText = `font-weight:600; font-size:var(--text-base); color:${c.color}; padding-bottom:var(--sp-8); border-bottom:1px solid var(--border-subtle); margin-bottom:var(--sp-12); cursor:pointer;`;
-    header.textContent = c.label;
-    header.addEventListener('click', () => openClusterSheet(c));
-    group.appendChild(header);
+  // Section header
+  const totalNarratives = CLUSTERS.reduce((n, c) => n + c.subTopics.length, 0);
+  const heading = document.createElement('div');
+  heading.style.cssText = 'padding:var(--sp-4) 0 var(--sp-16); margin-bottom:var(--sp-4); border-bottom:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between;';
+  heading.innerHTML = `
+    <span style="font-family:var(--font-display); font-size:var(--text-md); font-weight:650; color:var(--text-primary);">Top Narratives</span>
+    <span style="font-size:var(--text-xs); color:var(--text-secondary);">${totalNarratives} Narrative · 3 Cluster</span>
+  `;
+  listLayer.appendChild(heading);
 
-    c.subTopics.forEach(sub => {
-      const item = document.createElement('div');
-      item.className = 'narrative-card';
-      item.innerHTML = `
-        <div class="narrative-card__title">${sub.label}</div>
-        <div style="font-size:var(--text-sm); color:var(--text-secondary); margin-top:var(--sp-4);">${sub.explanation}</div>
+  CLUSTERS.forEach(cluster => {
+    // Cluster label
+    const clusterLabel = document.createElement('div');
+    clusterLabel.style.cssText = `font-size:var(--text-xs); font-weight:700; color:${cluster.color}; text-transform:uppercase; letter-spacing:var(--tracking-wide); padding:var(--sp-12) 0 var(--sp-4); cursor:pointer;`;
+    clusterLabel.textContent = cluster.label;
+    clusterLabel.addEventListener('click', () => openClusterSheet(cluster));
+    listLayer.appendChild(clusterLabel);
+
+    cluster.subTopics.forEach(sub => {
+      const isPos = sub.sentiment === 'pos';
+      const isNeg = sub.sentiment === 'neg';
+      const color = getSentimentColor(sub.score);
+      const arrow = isPos ? '&#8599;' : isNeg ? '&#8600;' : '&#8594;';
+      const sentLabel = isPos ? 'Positiv' : isNeg ? 'Negativ' : 'Gemischt';
+      const trendKey = isPos ? 'up' : isNeg ? 'down' : 'flat';
+      const pts = sparkPoints(trendKey);
+
+      const card = document.createElement('div');
+      card.className = 'narrative-card';
+      card.innerHTML = `
+        <div class="narrative-card__header">
+          <div>
+            <div class="narrative-card__title">${sub.label} <span style="color:${color}; margin-left:var(--sp-8);">${arrow}</span></div>
+            <div class="narrative-card__meta">
+              <span style="color:${color}; font-weight:500;">${sentLabel}</span>
+              <svg class="sparkline" viewBox="0 0 48 20"><polyline points="${pts}" stroke="${color}" fill="none" stroke-width="1.5"/></svg>
+            </div>
+          </div>
+          <div class="cluster-tag" style="color:${cluster.color}; border-color:${cluster.color}44; background:${cluster.color}0d;">${cluster.label}</div>
+        </div>
       `;
-      item.addEventListener('click', () => openSubSheet(sub, c));
-      group.appendChild(item);
+      card.addEventListener('click', () => openSubSheet(sub, cluster));
+      listLayer.appendChild(card);
     });
-
-    listLayer.appendChild(group);
   });
 }
 
