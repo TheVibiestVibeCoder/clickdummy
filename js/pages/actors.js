@@ -131,7 +131,17 @@ export function renderActors(container) {
           </div>
         </div>
 
-        <canvas id="actor-canvas" style="width:100%; height:100%; background:radial-gradient(circle at 50% 45%, rgba(255,153,102,0.12) 0%, rgba(255,153,102,0.04) 42%, rgba(255,153,102,0) 76%);"></canvas>
+        <canvas id="actor-canvas" style="width:100%; height:100%; background:transparent;"></canvas>
+        <button
+          id="actor-cone-toggle"
+          class="actor-cone-toggle"
+          type="button"
+          aria-label="Expand to 3D cone view"
+          title="Expand to 3D cone view"
+        >
+          <span class="actor-cone-toggle__icon" aria-hidden="true">&#x26F6;</span>
+          <span class="actor-cone-toggle__text">Expand 3D</span>
+        </button>
       </div>
 
       <div style="display:flex; flex-direction:column; gap:var(--sp-16); overflow-y:auto; min-height:0; padding-right:var(--sp-4);">
@@ -159,15 +169,42 @@ export function renderActors(container) {
   const connectionsEl = container.querySelector('#actors-connections');
   const badgeEl = container.querySelector('#actors-count-badge');
   const narrativeSelectEl = container.querySelector('#actor-narrative-select');
+  const coneToggleEl = container.querySelector('#actor-cone-toggle');
 
   let currentDataset = overallDataset;
+  let coneModeEnabled = false;
+
+  function defaultMetaText() {
+    return coneModeEnabled
+      ? `${currentDataset.meta} | 3D cone view`
+      : currentDataset.meta;
+  }
+
+  function syncConeToggleButton() {
+    if (!coneToggleEl) return;
+
+    coneToggleEl.classList.toggle('is-active', coneModeEnabled);
+    coneToggleEl.setAttribute(
+      'aria-label',
+      coneModeEnabled ? 'Return to 2D map view' : 'Expand to 3D cone view'
+    );
+    coneToggleEl.setAttribute(
+      'title',
+      coneModeEnabled ? 'Return to 2D map view' : 'Expand to 3D cone view'
+    );
+
+    const iconEl = coneToggleEl.querySelector('.actor-cone-toggle__icon');
+    const textEl = coneToggleEl.querySelector('.actor-cone-toggle__text');
+    if (iconEl) iconEl.innerHTML = coneModeEnabled ? '&#x2715;' : '&#x26F6;';
+    if (textEl) textEl.textContent = coneModeEnabled ? 'Back to 2D' : 'Expand 3D';
+  }
 
   const graph = initActorConstellation({
     canvas,
     onActorClick: (actor, index) => openActorSheet(currentDataset, actor, index),
     onHover: (index) => {
       if (index == null || !currentDataset.actors[index]) {
-        metaEl.textContent = currentDataset.meta;
+        metaEl.textContent = defaultMetaText();
         return;
       }
 
@@ -182,7 +219,7 @@ export function renderActors(container) {
     currentDataset = next;
 
     badgeEl.textContent = `${next.actors.length} tracked`;
-    metaEl.textContent = next.meta;
+    metaEl.textContent = defaultMetaText();
 
     graph.setData(next, { animate });
     renderActorCards(listEl, next, graph, currentDataset);
@@ -192,16 +229,25 @@ export function renderActors(container) {
   const onNarrativeChange = () => {
     applyDataset(narrativeSelectEl.value, true);
   };
+  const onConeToggle = () => {
+    coneModeEnabled = !coneModeEnabled;
+    graph.setConeMode(coneModeEnabled, { animate: true });
+    syncConeToggleButton();
+    metaEl.textContent = defaultMetaText();
+  };
 
   narrativeSelectEl.addEventListener('change', onNarrativeChange);
+  coneToggleEl?.addEventListener('click', onConeToggle);
 
   applyDataset(DATASET_ALL_KEY, false);
+  syncConeToggleButton();
 
   animatePageEnter(container);
   setTimeout(() => staggerIn(listEl, '.actor-card', 45), 260);
 
   return () => {
     narrativeSelectEl.removeEventListener('change', onNarrativeChange);
+    coneToggleEl?.removeEventListener('click', onConeToggle);
     graph.destroy();
   };
 }
@@ -446,6 +492,10 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
     lockedIndex: null,
     transitionStart: 0,
     transitionDuration: 820,
+    viewBlendFrom: 0,
+    viewBlendTo: 0,
+    viewTransitionStart: 0,
+    viewTransitionDuration: 2200,
     rafId: 0,
     lastTs: performance.now(),
     reduced: window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -480,6 +530,7 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
     );
 
     const anchors = buildAnchors(actors, state.w, state.h, normalizeInfluence, nodeScale);
+    const coneLayout = buildConeAnchors(actors, anchors, normalizeInfluence, nodeScale, state.w, state.h);
     const particles = buildParticles(actors, anchors, normalizeInfluence, nodeScale);
 
     return {
@@ -490,6 +541,9 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
       normalizeInfluence,
       nodeScale,
       anchors,
+      coneAnchors: coneLayout.anchors,
+      coneLevels: coneLayout.levels,
+      coneConfig: coneLayout.config,
       particles,
       actorByName: new Map(actors.map((actor, index) => [actor.name, index]))
     };
@@ -516,7 +570,18 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
     return easeInOutCubic(raw);
   }
 
-  function getActiveAnchor(index, blend = getBlend()) {
+  function getViewBlend(now = performance.now()) {
+    if (state.reduced) return state.viewBlendTo;
+    if (state.viewBlendFrom === state.viewBlendTo) return state.viewBlendTo;
+
+    const raw = clamp((now - state.viewTransitionStart) / state.viewTransitionDuration, 0, 1);
+    const eased = easeInOutQuint(raw);
+    const blend = lerp(state.viewBlendFrom, state.viewBlendTo, eased);
+    if (raw >= 1) state.viewBlendFrom = state.viewBlendTo;
+    return blend;
+  }
+
+  function getBlendedActiveAnchor(index, blend = getBlend()) {
     const target = state.active?.anchors[index];
     if (!target) return null;
     if (!state.previous || blend >= 1) return target;
@@ -544,29 +609,81 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
     };
   }
 
+  function projectConePoint(point) {
+    return projectConePointFromState(state, point);
+  }
+
+  function projectAnchorForView(runtime, flatAnchor, index, viewBlend = getViewBlend()) {
+    if (!flatAnchor) return null;
+    const coneAnchor = runtime?.coneAnchors?.[index];
+    if (!coneAnchor || viewBlend <= 0.001) {
+      return {
+        ...flatAnchor,
+        depth: flatAnchor.depth || 0,
+        perspective: flatAnchor.perspective || 1
+      };
+    }
+
+    const easedBlend = easeInOutSine(viewBlend);
+    const projected = projectConePoint(coneAnchor);
+
+    return {
+      ...flatAnchor,
+      x: lerp(flatAnchor.x, projected.x, easedBlend),
+      y: lerp(flatAnchor.y, projected.y, easedBlend),
+      angle: lerp(flatAnchor.angle, coneAnchor.angle, easedBlend),
+      ringRadius: lerp(flatAnchor.ringRadius, coneAnchor.ringRadius, easedBlend),
+      nodeRadius: lerp(flatAnchor.nodeRadius, coneAnchor.nodeRadius, easedBlend),
+      depth: projected.depth * easedBlend,
+      perspective: lerp(1, projected.perspective, easedBlend),
+      coneLevel: coneAnchor.level
+    };
+  }
+
+  function buildFrameAnchors(runtime, resolver, viewBlend) {
+    if (!runtime) return null;
+    const anchors = new Array(runtime.actors.length);
+    for (let index = 0; index < runtime.actors.length; index++) {
+      anchors[index] = projectAnchorForView(runtime, resolver(index), index, viewBlend);
+    }
+    return anchors;
+  }
+
   function frame(ts) {
     const dt = Math.min(0.04, (ts - state.lastTs) / 1000);
     state.lastTs = ts;
 
     const blend = getBlend(ts);
+    const viewBlend = getViewBlend(ts);
 
-    drawBackground(ctx, state);
+    drawBackground(ctx, state, viewBlend);
+
+    if (state.active && viewBlend > 0.02) {
+      drawConeGuides(ctx, state, state.active, viewBlend);
+    }
 
     if (state.previous && blend < 1) {
-      drawConnectionCurves(ctx, state, state.previous, idx => state.previous.anchors[idx], (1 - blend) * 0.62, null);
-      drawParticles(ctx, state, state.previous, dt, idx => state.previous.anchors[idx], (1 - blend) * 0.72, null);
-      drawAnchors(ctx, state, state.previous, idx => state.previous.anchors[idx], (1 - blend) * 0.62, null);
+      const previousAnchors = buildFrameAnchors(state.previous, idx => state.previous.anchors[idx], viewBlend);
+      const previousAnchorProvider = idx => previousAnchors[idx];
+      drawConnectionCurves(ctx, state, state.previous, previousAnchorProvider, (1 - blend) * 0.62, null, viewBlend);
+      drawParticles(ctx, state, state.previous, dt, previousAnchorProvider, (1 - blend) * 0.72, null, viewBlend);
+      drawAnchors(ctx, state, state.previous, previousAnchorProvider, (1 - blend) * 0.62, null, viewBlend);
     } else if (blend >= 1) {
       state.previous = null;
     }
 
     if (state.active) {
       const activeIndex = state.lockedIndex ?? state.focusIndex ?? state.hoverIndex;
-      const anchorProvider = idx => getActiveAnchor(idx, blend);
+      const activeAnchors = buildFrameAnchors(
+        state.active,
+        idx => getBlendedActiveAnchor(idx, blend),
+        viewBlend
+      );
+      const anchorProvider = idx => activeAnchors[idx];
 
-      drawConnectionCurves(ctx, state, state.active, anchorProvider, 0.42 + blend * 0.58, activeIndex);
-      drawParticles(ctx, state, state.active, dt, anchorProvider, 0.45 + blend * 0.55, activeIndex);
-      drawAnchors(ctx, state, state.active, anchorProvider, 0.5 + blend * 0.5, activeIndex);
+      drawConnectionCurves(ctx, state, state.active, anchorProvider, 0.42 + blend * 0.58, activeIndex, viewBlend);
+      drawParticles(ctx, state, state.active, dt, anchorProvider, 0.45 + blend * 0.55, activeIndex, viewBlend);
+      drawAnchors(ctx, state, state.active, anchorProvider, 0.5 + blend * 0.5, activeIndex, viewBlend);
     }
 
     state.rafId = requestAnimationFrame(frame);
@@ -584,16 +701,18 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
     if (!state.active) return null;
 
     const blend = getBlend();
+    const viewBlend = getViewBlend();
     let closest = null;
     let bestDistSq = Infinity;
 
     state.active.actors.forEach((_, index) => {
-      const anchor = getActiveAnchor(index, blend);
+      const flatAnchor = getBlendedActiveAnchor(index, blend);
+      const anchor = projectAnchorForView(state.active, flatAnchor, index, viewBlend);
       if (!anchor) return;
 
       const dx = pos.x - anchor.x;
       const dy = pos.y - anchor.y;
-      const radius = anchor.nodeRadius + 10;
+      const radius = anchor.nodeRadius + 10 + viewBlend * 2;
       const distSq = dx * dx + dy * dy;
 
       if (distSq <= radius * radius && distSq < bestDistSq) {
@@ -659,6 +778,23 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
       state.focusIndex = null;
       state.lockedIndex = null;
       onHover(null);
+    },
+    setConeMode(enabled, options = {}) {
+      const target = enabled ? 1 : 0;
+      const shouldAnimate = options.animate !== false && !state.reduced;
+      const current = getViewBlend();
+
+      if (!shouldAnimate) {
+        state.viewBlendFrom = target;
+        state.viewBlendTo = target;
+        state.viewTransitionStart = performance.now();
+        return;
+      }
+
+      state.viewBlendFrom = current;
+      state.viewBlendTo = target;
+      state.viewTransitionStart = performance.now();
+      state.viewTransitionDuration = target > current ? 2400 : 1850;
     },
     focus(index) {
       if (!state.active) return;
@@ -730,6 +866,64 @@ function buildAnchors(actors, w, h, normalizeReach, nodeScale = 1) {
   return anchors;
 }
 
+function buildConeAnchors(actors, flatAnchors, normalizeInfluence, nodeScale = 1, w = 0, h = 0) {
+  const extent = Math.max(1, Math.min(w, h));
+  const levelCount = clamp(Math.round(4 + actors.length / 2.8), 4, 8);
+  const topRadius = extent * (0.4 + nodeScale * 0.045);
+  const bottomRadius = extent * (0.1 + nodeScale * 0.012);
+  const topY = -extent * 0.34;
+  const bottomY = extent * 0.3;
+  const levels = new Array(levelCount);
+
+  for (let i = 0; i < levelCount; i++) {
+    const t = levelCount <= 1 ? 1 : i / (levelCount - 1);
+    levels[i] = {
+      t,
+      y3: lerp(bottomY, topY, t),
+      radius: lerp(bottomRadius, topRadius, t)
+    };
+  }
+
+  const coneAnchors = new Array(actors.length);
+
+  actors.forEach((_, index) => {
+    const flat = flatAnchors[index];
+    if (!flat) return;
+
+    const influence = clamp(normalizeInfluence(index), 0, 1);
+    const verticalBias = clamp((h * 0.84 - flat.y) / Math.max(1, h * 0.72), 0, 1);
+    const blendedLevel = clamp(influence * 0.72 + verticalBias * 0.28, 0, 1);
+    const snapped = Math.round(blendedLevel * (levelCount - 1)) / Math.max(1, levelCount - 1);
+    const level = clamp(lerp(blendedLevel, snapped, 0.68), 0, 1);
+
+    const radius = lerp(bottomRadius, topRadius, level);
+    const y3 = lerp(bottomY, topY, level);
+    const jitter = (hash01((index + 1) * 487) - 0.5) * 0.2 * (1 - level) * 0.8;
+    const angle = flat.angle + jitter;
+
+    coneAnchors[index] = {
+      angle,
+      level,
+      x3: Math.cos(angle) * radius,
+      y3,
+      z3: Math.sin(angle) * radius * (0.86 + (1 - level) * 0.22),
+      ringRadius: flat.ringRadius * (0.56 + level * 0.34),
+      nodeRadius: flat.nodeRadius * (0.82 + level * 0.28)
+    };
+  });
+
+  return {
+    anchors: coneAnchors,
+    levels,
+    config: {
+      topRadius,
+      bottomRadius,
+      topY,
+      bottomY
+    }
+  };
+}
+
 function buildParticles(actors, anchors, normalizeReach, nodeScale = 1) {
   const particles = [];
 
@@ -764,18 +958,43 @@ function buildParticles(actors, anchors, normalizeReach, nodeScale = 1) {
   return particles;
 }
 
-function drawBackground(ctx, state) {
+function drawBackground(ctx, state, modeBlend = 0) {
   const { w, h, centerX, centerY } = state;
   ctx.clearRect(0, 0, w, h);
+  const blend = easeInOutSine(modeBlend);
+  const baseFade = 1 - blend * 0.78;
 
   const g = ctx.createRadialGradient(centerX, centerY, 10, centerX, centerY, Math.min(w, h) * 0.62);
-  g.addColorStop(0, 'rgba(255,153,102,0.13)');
-  g.addColorStop(0.45, 'rgba(255,153,102,0.05)');
+  g.addColorStop(0, `rgba(255,153,102,${(0.13 * baseFade).toFixed(3)})`);
+  g.addColorStop(0.45, `rgba(255,153,102,${(0.05 * baseFade).toFixed(3)})`);
   g.addColorStop(1, 'rgba(255,153,102,0)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
 
-  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  if (blend > 0.01) {
+    const coolLayer = ctx.createLinearGradient(0, 0, 0, h);
+    coolLayer.addColorStop(0, `rgba(157,181,210,${(0.1 * blend).toFixed(3)})`);
+    coolLayer.addColorStop(0.58, `rgba(119,139,164,${(0.042 * blend).toFixed(3)})`);
+    coolLayer.addColorStop(1, 'rgba(119,139,164,0)');
+    ctx.fillStyle = coolLayer;
+    ctx.fillRect(0, 0, w, h);
+
+    const coneGlow = ctx.createRadialGradient(
+      centerX,
+      centerY - Math.min(w, h) * 0.16,
+      14,
+      centerX,
+      centerY,
+      Math.min(w, h) * 0.74
+    );
+    coneGlow.addColorStop(0, `rgba(208,224,246,${(0.078 * blend).toFixed(3)})`);
+    coneGlow.addColorStop(0.5, `rgba(147,169,194,${(0.038 * blend).toFixed(3)})`);
+    coneGlow.addColorStop(1, 'rgba(147,169,194,0)');
+    ctx.fillStyle = coneGlow;
+    ctx.fillRect(0, 0, w, h);
+  }
+
+  ctx.strokeStyle = `rgba(255,255,255,${(0.06 * (1 - blend * 0.9)).toFixed(3)})`;
   ctx.lineWidth = 1;
   for (let i = 1; i <= 4; i++) {
     const radius = (Math.min(w, h) * 0.14) + i * (Math.min(w, h) * 0.075);
@@ -785,25 +1004,95 @@ function drawBackground(ctx, state) {
   }
 }
 
-function drawConnectionCurves(ctx, state, dataset, anchorProvider, alphaMult, activeIndex) {
+function drawConeGuides(ctx, state, dataset, modeBlend) {
+  if (!dataset?.coneLevels?.length || modeBlend <= 0.01) return;
+
+  const blend = easeInOutSine(modeBlend);
+  const sampleCount = 56;
+  const levels = dataset.coneLevels;
+
+  levels.forEach((level, idx) => {
+    const levelT = level.t ?? (levels.length <= 1 ? 1 : idx / (levels.length - 1));
+    const alpha = (0.03 + levelT * 0.085) * blend;
+
+    ctx.beginPath();
+    for (let i = 0; i <= sampleCount; i++) {
+      const angle = (i / sampleCount) * Math.PI * 2;
+      const x3 = Math.cos(angle) * level.radius;
+      const y3 = level.y3;
+      const z3 = Math.sin(angle) * level.radius * 0.92;
+      const projected = projectConePointFromState(state, { x3, y3, z3 });
+      if (i === 0) ctx.moveTo(projected.x, projected.y);
+      else ctx.lineTo(projected.x, projected.y);
+    }
+    ctx.strokeStyle = `rgba(191,208,230,${alpha.toFixed(3)})`;
+    ctx.lineWidth = 0.8 + levelT * 0.6;
+    ctx.stroke();
+  });
+
+  const config = dataset.coneConfig;
+  if (!config) return;
+
+  const sideAngles = [Math.PI * 0.06, Math.PI * 0.94];
+  sideAngles.forEach(angle => {
+    const top = projectConePointFromState(state, {
+      x3: Math.cos(angle) * config.topRadius,
+      y3: config.topY,
+      z3: Math.sin(angle) * config.topRadius * 0.92
+    });
+    const bottom = projectConePointFromState(state, {
+      x3: Math.cos(angle) * config.bottomRadius,
+      y3: config.bottomY,
+      z3: Math.sin(angle) * config.bottomRadius * 0.92
+    });
+
+    ctx.beginPath();
+    ctx.moveTo(bottom.x, bottom.y);
+    ctx.lineTo(top.x, top.y);
+    ctx.strokeStyle = `rgba(191,208,230,${(0.09 * blend).toFixed(3)})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  });
+}
+
+function drawConnectionCurves(ctx, state, dataset, anchorProvider, alphaMult, activeIndex, modeBlend = 0) {
   if (!dataset || !dataset.connections.length || alphaMult <= 0.01) return;
 
-  dataset.connections.forEach(edge => {
-    const from = anchorProvider(edge.from);
-    const to = anchorProvider(edge.to);
-    if (!from || !to) return;
+  const preparedEdges = dataset.connections
+    .map(edge => {
+      const from = anchorProvider(edge.from);
+      const to = anchorProvider(edge.to);
+      if (!from || !to) return null;
+      return {
+        edge,
+        from,
+        to,
+        depth: ((from.depth || 0) + (to.depth || 0)) * 0.5
+      };
+    })
+    .filter(Boolean);
 
+  if (modeBlend > 0.08) {
+    preparedEdges.sort((a, b) => a.depth - b.depth);
+  }
+
+  preparedEdges.forEach(item => {
+    const { edge, from, to, depth } = item;
     const midX = (from.x + to.x) * 0.5;
     const midY = (from.y + to.y) * 0.5;
     const toCenterX = state.centerX - midX;
     const toCenterY = state.centerY - midY;
 
-    const ctrlX = midX + toCenterX * 0.24;
-    const ctrlY = midY + toCenterY * 0.24;
+    const modePull = easeInOutSine(modeBlend);
+    const ctrlX = midX + toCenterX * lerp(0.24, 0.12, modePull);
+    const lift = (14 + depth * 26) * modePull;
+    const ctrlY = midY + toCenterY * lerp(0.24, 0.08, modePull) - lift;
 
     const emphasized = activeIndex == null || edge.from === activeIndex || edge.to === activeIndex;
-    const alpha = (emphasized ? 0.22 + edge.weight * 0.18 : 0.05) * alphaMult;
-    const width = emphasized ? 0.7 + edge.weight * 1.2 : 0.6;
+    const alpha = (emphasized ? 0.22 + edge.weight * 0.18 : 0.05) * alphaMult * lerp(1, 0.9 + depth * 0.2, modePull);
+    const width = emphasized
+      ? (0.7 + edge.weight * 1.2) * lerp(1, 0.85 + depth * 0.26, modePull)
+      : 0.6;
 
     ctx.beginPath();
     ctx.moveTo(from.x, from.y);
@@ -814,10 +1103,11 @@ function drawConnectionCurves(ctx, state, dataset, anchorProvider, alphaMult, ac
   });
 }
 
-function drawParticles(ctx, state, dataset, dt, anchorProvider, alphaMult, activeIndex) {
+function drawParticles(ctx, state, dataset, dt, anchorProvider, alphaMult, activeIndex, modeBlend = 0) {
   if (!dataset || !dataset.particles.length || alphaMult <= 0.01) return;
 
   const now = state.reduced ? 0 : performance.now() * 0.001;
+  const modePull = easeInOutSine(modeBlend);
 
   dataset.particles.forEach(p => {
     const anchor = anchorProvider(p.actorIndex);
@@ -831,43 +1121,65 @@ function drawParticles(ctx, state, dataset, dt, anchorProvider, alphaMult, activ
 
     const t = p.theta + now * p.speed * 0.25;
     const wobble = 1 + Math.sin(now * 0.65 + p.warp * 2.4) * 0.08;
+    const depth = anchor.depth || 0;
 
     const lx = anchor.x + Math.cos(t + anchor.drift) * p.orbit * wobble;
     const ly = anchor.y + Math.sin((t * 1.08) + anchor.drift * 0.7) * p.orbit * 0.8 * wobble;
 
-    const x = lx + (state.centerX - lx) * p.lane;
-    const y = ly + (state.centerY - ly) * p.lane + Math.sin(t * 0.9 + p.warp) * (1 - p.lane) * 1.8;
+    const x2d = lx + (state.centerX - lx) * p.lane;
+    const y2d = ly + (state.centerY - ly) * p.lane + Math.sin(t * 0.9 + p.warp) * (1 - p.lane) * 1.8;
+
+    const coneOrbit = p.orbit * (0.32 + (1 - p.lane) * 0.56) * (0.84 + depth * 0.52);
+    const coneX = anchor.x + Math.cos(t * 0.96 + anchor.drift * 0.78) * coneOrbit;
+    const coneY = anchor.y
+      + Math.sin(t * 0.68 + anchor.drift * 0.62) * coneOrbit * 0.34
+      - (1 - p.lane) * (2 + depth * 7.6);
+
+    const x = lerp(x2d, coneX, modePull);
+    const y = lerp(y2d, coneY, modePull);
 
     const alphaBoost = activeIndex == null || activeIndex === p.actorIndex ? 1 : 0.32;
-    const alpha = p.alpha * alphaBoost * alphaMult;
+    const alpha = p.alpha * alphaBoost * alphaMult * lerp(1, 0.62 + depth * 0.52, modePull);
+    const particleSize = p.size * lerp(1, 0.84 + depth * 0.54, modePull);
 
     ctx.fillStyle = rgbaFromHex(actor.color, alpha);
     ctx.beginPath();
-    ctx.arc(x, y, p.size, 0, Math.PI * 2);
+    ctx.arc(x, y, particleSize, 0, Math.PI * 2);
     ctx.fill();
   });
 }
 
-function drawAnchors(ctx, state, dataset, anchorProvider, alphaMult, activeIndex) {
+function drawAnchors(ctx, state, dataset, anchorProvider, alphaMult, activeIndex, modeBlend = 0) {
   if (!dataset || alphaMult <= 0.01) return;
 
   const nodeScale = dataset.nodeScale || 1;
   const actorCount = dataset.actors.length;
   const dense = actorCount >= 12;
   const crowded = actorCount >= 15;
+  const modePull = easeInOutSine(modeBlend);
+  const drawable = dataset.actors
+    .map((actor, index) => ({ actor, index, anchor: anchorProvider(index) }))
+    .filter(entry => Boolean(entry.anchor));
 
-  dataset.actors.forEach((actor, index) => {
-    const anchor = anchorProvider(index);
-    if (!anchor) return;
+  if (modeBlend > 0.08) {
+    drawable.sort((a, b) => (a.anchor.depth || 0) - (b.anchor.depth || 0));
+  }
+
+  drawable.forEach(({ actor, index, anchor }) => {
+    const depth = anchor.depth || 0;
 
     const reachNorm = dataset.normalizeInfluence ? dataset.normalizeInfluence(index) : dataset.normalizeReach(index);
     const isActive = activeIndex === index;
     const dimmed = activeIndex != null && !isActive;
 
-    const haloR = anchor.nodeRadius + (8 + nodeScale * 2.4) + Math.sin(performance.now() * 0.002 + anchor.drift) * 1.6;
+    const haloR = (anchor.nodeRadius + (8 + nodeScale * 2.4) + Math.sin(performance.now() * 0.002 + anchor.drift) * 1.6)
+      * lerp(1, 0.92 + depth * 0.2, modePull);
     ctx.beginPath();
     ctx.arc(anchor.x, anchor.y, haloR, 0, Math.PI * 2);
-    ctx.fillStyle = rgbaFromHex(actor.color, (isActive ? 0.22 : (dimmed ? 0.05 : 0.11)) * alphaMult);
+    ctx.fillStyle = rgbaFromHex(
+      actor.color,
+      (isActive ? 0.22 : (dimmed ? 0.05 : 0.11)) * alphaMult * lerp(1, 0.74 + depth * 0.32, modePull)
+    );
     ctx.fill();
 
     ctx.beginPath();
@@ -882,14 +1194,14 @@ function drawAnchors(ctx, state, dataset, anchorProvider, alphaMult, activeIndex
 
     const labelOffset = 20 + reachNorm * 11 + (1 - nodeScale) * 5;
     let vx = anchor.x - state.centerX;
-    let vy = (anchor.y - state.centerY) * 1.08;
+    let vy = (anchor.y - state.centerY) * lerp(1.08, 0.84 + (1 - depth) * 0.22, modePull);
     const vLen = Math.hypot(vx, vy) || 1;
     vx /= vLen;
     vy /= vLen;
     const tx = anchor.x + vx * labelOffset;
     const ty = anchor.y + vy * labelOffset;
-    const showReach = isActive || !dense;
-    const showName = isActive || !crowded || (activeIndex != null && !dimmed);
+    const showReach = isActive || (!dense && modeBlend < 0.62);
+    const showName = isActive || !crowded || (activeIndex != null && !dimmed) || (modeBlend > 0.5 && (anchor.coneLevel || 0) > 0.8);
     const displayName = crowded && !isActive ? compactActorName(actor.name) : actor.name;
     const nameSize = clamp(9 + nodeScale * 2.6, 9, 12);
 
@@ -996,6 +1308,31 @@ function lerp(a, b, t) {
 
 function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
+}
+
+function projectConePointFromState(state, point) {
+  const extent = Math.max(1, Math.min(state.w, state.h));
+  const cameraDistance = extent * 1.74;
+  const depthScale = 0.9;
+  const depthZ = point.z3 * depthScale;
+  const denominator = Math.max(44, cameraDistance - depthZ);
+  const perspective = cameraDistance / denominator;
+
+  return {
+    x: state.centerX + point.x3 * perspective,
+    y: state.centerY + point.y3 * perspective,
+    perspective,
+    depth: clamp((depthZ / (extent * 0.54) + 1) * 0.5, 0, 1)
+  };
+}
+
+function easeInOutSine(t) {
+  return -(Math.cos(Math.PI * t) - 1) / 2;
+}
+
+function easeInOutQuint(t) {
+  if (t < 0.5) return 16 * t * t * t * t * t;
+  return 1 - Math.pow(-2 * t + 2, 5) / 2;
 }
 
 function easeInOutCubic(t) {
