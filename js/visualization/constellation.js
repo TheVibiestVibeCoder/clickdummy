@@ -52,6 +52,7 @@ let interactionLayer;
 let zoomSlider;
 let zoomValue;
 let zoomReadout;
+let fullscreenBtn;
 
 export function initConstellation(containerEl) {
   container = containerEl;
@@ -98,6 +99,7 @@ export function initConstellation(containerEl) {
       <canvas id="webgl-canvas" class="constellation-webgl"></canvas>
       <canvas id="hud-canvas" class="constellation-hud"></canvas>
       <div id="interaction-layer" class="constellation-interaction"></div>
+      <button id="map-fullscreen-btn" class="constellation-fullscreen-btn" aria-label="Enter fullscreen" title="Fullscreen">&#x26F6;</button>
     </div>
 
     <div id="list-layer" class="list-layer constellation-list-layer"></div>
@@ -109,6 +111,7 @@ export function initConstellation(containerEl) {
   zoomSlider = container.querySelector('#zoom-slider');
   zoomValue = container.querySelector('#zoom-value');
   zoomReadout = container.querySelector('#zoom-readout');
+  fullscreenBtn = container.querySelector('#map-fullscreen-btn');
 
   const btnGraph = container.querySelector('#btn-graph');
   const btnList = container.querySelector('#btn-list');
@@ -178,6 +181,30 @@ export function initConstellation(containerEl) {
     });
     container.querySelector('#zoom-in').addEventListener('click', () => adjustZoom(0.15));
     container.querySelector('#zoom-out').addEventListener('click', () => adjustZoom(-0.15));
+
+    if (fullscreenBtn && document.fullscreenEnabled) {
+      const syncFullscreenState = () => {
+        const isFullscreen = document.fullscreenElement === container;
+        container.classList.toggle('is-map-fullscreen', isFullscreen);
+        fullscreenBtn.setAttribute('aria-label', isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen');
+        fullscreenBtn.setAttribute('title', isFullscreen ? 'Exit fullscreen' : 'Fullscreen');
+        fullscreenBtn.innerHTML = isFullscreen ? '&#x2715;' : '&#x26F6;';
+        onResize();
+      };
+
+      bindInteraction(fullscreenBtn, 'click', async () => {
+        try {
+          if (document.fullscreenElement === container) await document.exitFullscreen();
+          else await container.requestFullscreen();
+        } catch (err) {
+          console.warn('Fullscreen toggle failed:', err);
+        }
+      });
+      bindInteraction(document, 'fullscreenchange', syncFullscreenState);
+      syncFullscreenState();
+    } else if (fullscreenBtn) {
+      fullscreenBtn.style.display = 'none';
+    }
 
     window.addEventListener('resize', onResize);
     updateReadout();
@@ -637,14 +664,14 @@ function animate() {
   const parallax = lerp(0.42, 0.22, smoothStep(1.2, 3.1, currentZoom));
   const pointerFollow = isDragging ? 0 : 1;
   const targetCamX = panX + mouseNormX * parallax * pointerFollow;
-  const targetCamY = -panY - mouseNormY * parallax * pointerFollow + s2 * 1.4 + layback * 14;
+  const targetCamY = -panY - mouseNormY * parallax * pointerFollow + s2 * 1.4 - layback * 14;
   const targetCamZ = (132 / currentZoom) - s2 * 12;
 
   camera.position.x += (targetCamX - camera.position.x) * 0.085;
   camera.position.y += (targetCamY - camera.position.y) * 0.085;
   camera.position.z += (targetCamZ - camera.position.z) * 0.1;
-  const lookX = camera.position.x + layback * -6;
-  const lookY = camera.position.y - layback * 36;
+  const lookX = camera.position.x + layback * 6;
+  const lookY = camera.position.y + layback * 36;
   camera.lookAt(lookX, lookY, 0);
 
   if (particlesMesh) {
