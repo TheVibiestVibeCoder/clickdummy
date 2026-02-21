@@ -1,42 +1,72 @@
 /* ============================================================
-   CONSTELLATION MAP — "Nebula Intelligence" Premium Redesign
-
-   Luminous core nodes, orbital particle clouds, flowing bezier
-   connections with traveling light pulses, cinematic zoom,
-   mouse parallax, entrance animation.
+   CONSTELLATION MAP - Luxe orbital narrative graph
    ============================================================ */
 
 import { CLUSTERS, getClusterAvgScore, getSentimentColor, sparkPoints } from '../data.js';
 import { openClusterSheet, openSubSheet, openMicroSheet } from '../components/side-sheet.js';
 
-/* ─── State ──────────────────────────────────────────────── */
+const VIEW_TOP_OFFSET = 48;
+const PARTICLE_COUNT = 2400;
+const MACRO_RING_X = 34;
+const MACRO_RING_Y = 24;
 
-let scene, camera, renderer, particlesMesh;
-let hudCanvas, hudCtx;
-let width, height;
-let targetZoom = 1.0, currentZoom = 1.0;
-let panX = 0, panY = 0, isDragging = false, lastMouseX = 0, lastMouseY = 0;
+let scene;
+let camera;
+let renderer;
+let particlesMesh;
+
+let hudCanvas;
+let hudCtx;
+
+let width = 0;
+let height = 0;
+
+let targetZoom = 1.0;
+let currentZoom = 1.0;
+
+let panX = 0;
+let panY = 0;
+let isDragging = false;
+let lastMouseX = 0;
+let lastMouseY = 0;
 let lastTouchDist = 0;
-let hitRegions = [];
+
+let mouseTargetX = 0;
+let mouseTargetY = 0;
+let mouseNormX = 0;
+let mouseNormY = 0;
+
+let initTime = 0;
 let animFrame = null;
 
-// Parallax
-let mouseTargetX = 0, mouseTargetY = 0;
-let mouseNormX = 0, mouseNormY = 0;
-
-// Entrance
-let initTime = 0;
-
-const PARTICLE_COUNT = 2000;
 const particleData = [];
+const macroAnchors = [];
+const hitRegions = [];
+const interactionCleanup = [];
 
-let container, canvasGL, canvasHUD, interactionLayer;
-let zoomSlider, zoomValue, zoomReadout;
-
-/* ─── Initialization ─────────────────────────────────────── */
+let container;
+let canvasGL;
+let canvasHUD;
+let interactionLayer;
+let zoomSlider;
+let zoomValue;
+let zoomReadout;
 
 export function initConstellation(containerEl) {
   container = containerEl;
+
+  targetZoom = 1.0;
+  currentZoom = 1.0;
+  panX = 0;
+  panY = 0;
+  mouseTargetX = 0;
+  mouseTargetY = 0;
+  mouseNormX = 0;
+  mouseNormY = 0;
+  particleData.length = 0;
+  macroAnchors.length = 0;
+  hitRegions.length = 0;
+  clearInteractionListeners();
 
   container.innerHTML = `
     <div class="viz-controls">
@@ -47,22 +77,29 @@ export function initConstellation(containerEl) {
           <button class="pill" id="btn-list">Liste</button>
         </div>
       </div>
-      <div class="zoom-strip">
+      <div class="zoom-strip zoom-strip--constellation">
         <span class="zoom-strip__label" id="zoom-readout">Macro</span>
-        <button class="zoom-strip__btn" id="zoom-out">&minus;</button>
-        <input type="range" id="zoom-slider" min="0.5" max="3.5" step="0.01" value="1.0" />
-        <button class="zoom-strip__btn" id="zoom-in">+</button>
+        <button class="zoom-strip__btn" id="zoom-out" aria-label="Zoom out">&minus;</button>
+        <div class="zoom-strip__track-wrap">
+          <input type="range" id="zoom-slider" min="0.5" max="3.5" step="0.01" value="1.0" />
+          <div class="zoom-strip__stages" aria-hidden="true">
+            <span>Macro</span>
+            <span>Sub</span>
+            <span>Micro</span>
+          </div>
+        </div>
+        <button class="zoom-strip__btn" id="zoom-in" aria-label="Zoom in">+</button>
         <span class="zoom-strip__value" id="zoom-value">1.0x</span>
       </div>
     </div>
 
-    <div id="graph-layer" style="position:absolute; inset:0; top:48px;">
-      <canvas id="webgl-canvas" style="position:absolute;inset:0;width:100%;height:100%;z-index:1;"></canvas>
-      <canvas id="hud-canvas" style="position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;"></canvas>
-      <div id="interaction-layer" style="position:absolute;inset:0;z-index:3;cursor:grab;"></div>
+    <div id="graph-layer" class="constellation-graph-layer">
+      <canvas id="webgl-canvas" class="constellation-webgl"></canvas>
+      <canvas id="hud-canvas" class="constellation-hud"></canvas>
+      <div id="interaction-layer" class="constellation-interaction"></div>
     </div>
 
-    <div id="list-layer" class="list-layer" style="position:absolute; inset:0; top:48px; opacity:0; pointer-events:none; z-index:0; overflow-y:auto; padding:var(--sp-16); background:rgba(8,10,13,0.9);"></div>
+    <div id="list-layer" class="list-layer constellation-list-layer"></div>
   `;
 
   canvasGL = container.querySelector('#webgl-canvas');
@@ -107,19 +144,19 @@ export function initConstellation(containerEl) {
 
   try {
     width = container.clientWidth;
-    height = container.clientHeight - 48;
+    height = Math.max(1, container.clientHeight - VIEW_TOP_OFFSET);
     initTime = Date.now() * 0.001;
 
     scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x050607, 0.005);
+    scene.fog = new THREE.FogExp2(0x05070a, 0.0048);
 
-    camera = new THREE.PerspectiveCamera(55, width / height, 0.1, 1000);
-    camera.position.z = 90;
+    camera = new THREE.PerspectiveCamera(52, width / height, 0.1, 1000);
+    camera.position.set(0, 0, 108);
 
     renderer = new THREE.WebGLRenderer({ canvas: canvasGL, antialias: true });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setClearColor(0x050607, 1);
+    renderer.setClearColor(0x05070a, 1);
 
     hudCanvas = canvasHUD;
     hudCtx = hudCanvas.getContext('2d');
@@ -130,6 +167,7 @@ export function initConstellation(containerEl) {
     hudCanvas.style.height = height + 'px';
     hudCtx.scale(dpr, dpr);
 
+    buildMacroAnchors();
     generateParticles();
     setupInteraction();
 
@@ -141,6 +179,7 @@ export function initConstellation(containerEl) {
     container.querySelector('#zoom-out').addEventListener('click', () => adjustZoom(-0.15));
 
     window.addEventListener('resize', onResize);
+    updateReadout();
     animate();
   } catch (e) {
     console.error('Constellation init failed:', e);
@@ -149,55 +188,58 @@ export function initConstellation(containerEl) {
   return destroyConstellation;
 }
 
-/* ─── Particle System ────────────────────────────────────── */
-
 function generateParticles() {
   const geometry = new THREE.BufferGeometry();
-  const positions = [], colors = [], sizes = [], phases = [];
+  const positions = [];
+  const colors = [];
+  const sizes = [];
+  const phases = [];
 
   for (let i = 0; i < PARTICLE_COUNT; i++) {
     const cIdx = i % CLUSTERS.length;
-    const c = CLUSTERS[cIdx];
-    const sIdx = Math.floor(Math.random() * c.subTopics.length);
-    const s = c.subTopics[sIdx];
-    const mIdx = Math.floor(Math.random() * s.micro.length);
-    const m = s.micro[mIdx];
+    const cluster = CLUSTERS[cIdx];
+    const sIdx = Math.floor(Math.random() * cluster.subTopics.length);
+    const sub = cluster.subTopics[sIdx];
+    const mIdx = Math.floor(Math.random() * sub.micro.length);
+    const mic = sub.micro[mIdx];
 
-    const l1 = sphericalOffset(20);
-    const l2 = sphericalOffset(8);
-    const l3 = sphericalOffset(3.5);
+    const l1 = sphericalOffset(18.5);
+    const l2 = sphericalOffset(7.4);
+    const l3 = sphericalOffset(3.2);
 
-    // Per-particle motion parameters
-    const orbitSpeed = (0.02 + Math.random() * 0.06) * (Math.random() > 0.5 ? 1 : -1);
-    const driftSpeed = 0.12 + Math.random() * 0.18;
-    const driftAmp = 0.3 + Math.random() * 0.5;
+    const orbitSpeed = (0.018 + Math.random() * 0.052) * (Math.random() > 0.5 ? 1 : -1);
+    const driftSpeed = 0.12 + Math.random() * 0.2;
+    const driftAmp = 0.26 + Math.random() * 0.58;
     const phase = Math.random() * Math.PI * 2;
 
     particleData.push({
-      cIdx, sIdx, mIdx,
+      cIdx,
+      sIdx,
+      mIdx,
       l1x: l1.x, l1y: l1.y, l1z: l1.z,
       l2x: l2.x, l2y: l2.y, l2z: l2.z,
       l3x: l3.x, l3y: l3.y, l3z: l3.z,
-      c, s, m,
-      orbitSpeed, driftSpeed, driftAmp, phase
+      sub,
+      mic,
+      orbitSpeed,
+      driftSpeed,
+      driftAmp,
+      phase
     });
 
-    // Start at cluster center for entrance animation
-    positions.push(c.x, c.y, 0);
+    positions.push(cluster.x, cluster.y, 0);
 
-    // Color: cluster tint blended toward cool off-white
-    const col = new THREE.Color(c.color);
-    const neutrality = 0.5 + Math.random() * 0.35;
-    col.lerp(new THREE.Color(0xe0e6ef), neutrality);
+    const col = new THREE.Color(cluster.color);
+    const coolBias = 0.48 + Math.random() * 0.38;
+    col.lerp(new THREE.Color(0xdce5f1), coolBias);
     colors.push(col.r, col.g, col.b);
 
-    // Weighted size distribution: 65% small, 27% medium, 8% large
     const r = Math.random();
-    let sz;
-    if (r < 0.65) sz = 0.25 + Math.random() * 0.35;
-    else if (r < 0.92) sz = 0.6 + Math.random() * 0.5;
-    else sz = 1.1 + Math.random() * 0.9;
-    sizes.push(sz);
+    let size;
+    if (r < 0.7) size = 0.24 + Math.random() * 0.32;
+    else if (r < 0.93) size = 0.56 + Math.random() * 0.46;
+    else size = 1.0 + Math.random() * 1.0;
+    sizes.push(size);
 
     phases.push(phase);
   }
@@ -222,10 +264,10 @@ function generateParticles() {
 
       void main() {
         vColor = color;
-        float breathe = 0.80 + 0.20 * sin(uTime * 0.55 + phase);
+        float breathe = 0.78 + 0.22 * sin(uTime * 0.58 + phase);
         vAlpha = breathe;
         vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-        gl_PointSize = size * breathe * (520.0 / -mvPosition.z);
+        gl_PointSize = size * breathe * (560.0 / -mvPosition.z);
         gl_Position = projectionMatrix * mvPosition;
       }
     `,
@@ -236,7 +278,7 @@ function generateParticles() {
 
       void main() {
         vec4 tex = texture2D(pointTexture, gl_PointCoord);
-        gl_FragColor = vec4(vColor, vAlpha * 0.72) * tex;
+        gl_FragColor = vec4(vColor, vAlpha * 0.74) * tex;
       }
     `,
     blending: THREE.AdditiveBlending,
@@ -251,15 +293,16 @@ function generateParticles() {
 function createGlowTexture() {
   const size = 128;
   const c = document.createElement('canvas');
-  c.width = size; c.height = size;
+  c.width = size;
+  c.height = size;
   const ctx = c.getContext('2d');
   const h = size / 2;
   const g = ctx.createRadialGradient(h, h, 0, h, h, h);
-  g.addColorStop(0, 'rgba(255,255,255,1.0)');
-  g.addColorStop(0.06, 'rgba(255,255,255,0.72)');
-  g.addColorStop(0.15, 'rgba(255,255,255,0.32)');
-  g.addColorStop(0.35, 'rgba(255,255,255,0.09)');
-  g.addColorStop(0.6, 'rgba(255,255,255,0.02)');
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.08, 'rgba(255,255,255,0.76)');
+  g.addColorStop(0.2, 'rgba(255,255,255,0.33)');
+  g.addColorStop(0.42, 'rgba(255,255,255,0.1)');
+  g.addColorStop(0.7, 'rgba(255,255,255,0.02)');
   g.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, size, size);
@@ -267,10 +310,11 @@ function createGlowTexture() {
 }
 
 function sphericalOffset(scale) {
-  const u = Math.random(), v = Math.random();
+  const u = Math.random();
+  const v = Math.random();
   const theta = 2 * Math.PI * u;
   const phi = Math.acos(2 * v - 1);
-  const r = Math.pow(Math.random(), 1.5) * scale;
+  const r = Math.pow(Math.random(), 1.48) * scale;
   return {
     x: r * Math.sin(phi) * Math.cos(theta),
     y: r * Math.sin(phi) * Math.sin(theta),
@@ -278,35 +322,49 @@ function sphericalOffset(scale) {
   };
 }
 
-/* ─── Interaction ────────────────────────────────────────── */
+function clearInteractionListeners() {
+  while (interactionCleanup.length) {
+    const off = interactionCleanup.pop();
+    off();
+  }
+}
+
+function bindInteraction(target, eventName, handler, options) {
+  target.addEventListener(eventName, handler, options);
+  interactionCleanup.push(() => target.removeEventListener(eventName, handler, options));
+}
 
 function setupInteraction() {
-  let startX, startY;
+  clearInteractionListeners();
 
-  interactionLayer.addEventListener('mousedown', e => {
+  let startX = 0;
+  let startY = 0;
+  let touchStartX = 0;
+  let touchStartY = 0;
+
+  bindInteraction(interactionLayer, 'mousedown', e => {
     isDragging = true;
-    lastMouseX = e.clientX;
-    lastMouseY = e.clientY;
     startX = e.clientX;
     startY = e.clientY;
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
     interactionLayer.style.cursor = 'grabbing';
   });
 
-  window.addEventListener('mouseup', e => {
+  bindInteraction(window, 'mouseup', e => {
     const wasDragging = isDragging;
     isDragging = false;
     interactionLayer.style.cursor = 'grab';
-    if (wasDragging && e.target === interactionLayer) {
-      const dist = Math.sqrt(Math.pow(e.clientX - startX, 2) + Math.pow(e.clientY - startY, 2));
-      if (dist < 5) {
-        const rect = interactionLayer.getBoundingClientRect();
-        checkClick(e.clientX - rect.left, e.clientY - rect.top);
-      }
+    if (!wasDragging || e.target !== interactionLayer) return;
+
+    const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
+    if (dist < 5) {
+      const rect = interactionLayer.getBoundingClientRect();
+      checkClick(e.clientX - rect.left, e.clientY - rect.top);
     }
   });
 
-  window.addEventListener('mousemove', e => {
-    // Track mouse for parallax
+  bindInteraction(window, 'mousemove', e => {
     const rect = interactionLayer.getBoundingClientRect();
     if (rect.width > 0 && rect.height > 0) {
       mouseTargetX = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
@@ -314,24 +372,32 @@ function setupInteraction() {
     }
 
     if (!isDragging) {
-      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
       let hit = false;
-      for (const r of hitRegions) {
-        if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) { hit = true; break; }
+      for (const region of hitRegions) {
+        if (mx >= region.x && mx <= region.x + region.w && my >= region.y && my <= region.y + region.h) {
+          hit = true;
+          break;
+        }
       }
       interactionLayer.style.cursor = hit ? 'pointer' : 'grab';
       return;
     }
+
     panX -= (e.clientX - lastMouseX) * 0.06;
     panY -= (e.clientY - lastMouseY) * 0.06;
     lastMouseX = e.clientX;
     lastMouseY = e.clientY;
   });
 
-  // Touch
-  interactionLayer.addEventListener('touchstart', e => {
+  const passiveFalse = { passive: false };
+
+  bindInteraction(interactionLayer, 'touchstart', e => {
     if (e.touches.length === 1) {
       isDragging = true;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
       lastMouseX = e.touches[0].clientX;
       lastMouseY = e.touches[0].clientY;
     } else if (e.touches.length === 2) {
@@ -340,10 +406,11 @@ function setupInteraction() {
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       lastTouchDist = Math.sqrt(dx * dx + dy * dy);
     }
-  }, { passive: false });
+  }, passiveFalse);
 
-  interactionLayer.addEventListener('touchmove', e => {
+  bindInteraction(interactionLayer, 'touchmove', e => {
     if (e.target === interactionLayer) e.preventDefault();
+
     if (e.touches.length === 1 && isDragging) {
       panX -= (e.touches[0].clientX - lastMouseX) * 0.2;
       panY -= (e.touches[0].clientY - lastMouseY) * 0.2;
@@ -355,55 +422,91 @@ function setupInteraction() {
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (lastTouchDist > 0) {
         targetZoom += (dist - lastTouchDist) * 0.01;
-        targetZoom = Math.max(0.5, Math.min(3.5, targetZoom));
+        targetZoom = clamp(targetZoom, 0.5, 3.5);
         zoomSlider.value = targetZoom;
         updateReadout();
       }
       lastTouchDist = dist;
     }
-  }, { passive: false });
+  }, passiveFalse);
 
-  interactionLayer.addEventListener('touchend', () => { isDragging = false; lastTouchDist = 0; });
+  bindInteraction(interactionLayer, 'touchend', e => {
+    if (e.changedTouches.length === 1 && lastTouchDist === 0) {
+      const endTouch = e.changedTouches[0];
+      const dist = Math.hypot(endTouch.clientX - touchStartX, endTouch.clientY - touchStartY);
+      if (dist < 8) {
+        const rect = interactionLayer.getBoundingClientRect();
+        checkClick(endTouch.clientX - rect.left, endTouch.clientY - rect.top);
+      }
+    }
+    isDragging = false;
+    lastTouchDist = 0;
+  });
 
-  interactionLayer.addEventListener('wheel', e => {
+  bindInteraction(interactionLayer, 'wheel', e => {
     e.preventDefault();
-    targetZoom += (e.deltaY * -0.0008);
-    targetZoom = Math.max(0.5, Math.min(3.5, targetZoom));
+    targetZoom += e.deltaY * -0.0008;
+    targetZoom = clamp(targetZoom, 0.5, 3.5);
     zoomSlider.value = targetZoom;
     updateReadout();
-  }, { passive: false });
+  }, passiveFalse);
 }
 
 function checkClick(mx, my) {
   for (let i = hitRegions.length - 1; i >= 0; i--) {
-    const r = hitRegions[i];
-    if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) {
-      r.action();
+    const region = hitRegions[i];
+    if (mx >= region.x && mx <= region.x + region.w && my >= region.y && my <= region.y + region.h) {
+      region.action();
       return;
     }
   }
 }
 
-function adjustZoom(d) {
-  targetZoom = Math.max(0.5, Math.min(3.5, targetZoom + d));
+function adjustZoom(delta) {
+  targetZoom = clamp(targetZoom + delta, 0.5, 3.5);
   zoomSlider.value = targetZoom;
   updateReadout();
 }
 
 function updateReadout() {
   zoomValue.textContent = targetZoom.toFixed(1) + 'x';
-  zoomReadout.textContent = targetZoom < 1.3 ? 'Macro' : (targetZoom < 2.3 ? 'Sub-Cluster' : 'Micro');
+
+  let stage = 'Macro';
+  let stageKey = 'macro';
+  if (targetZoom >= 2.3) {
+    stage = 'Micro';
+    stageKey = 'micro';
+  } else if (targetZoom >= 1.3) {
+    stage = 'Sub-Cluster';
+    stageKey = 'sub';
+  }
+  zoomReadout.textContent = stage;
+  container.setAttribute('data-zoom-stage', stageKey);
 }
 
-/* ─── Helpers ────────────────────────────────────────────── */
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v));
+}
 
-function lerp(a, b, t) { return a * (1 - t) + b * t; }
+function lerp(a, b, t) {
+  return a * (1 - t) + b * t;
+}
 
-function hexToRGBA(hex, a) {
+function smoothStep(start, end, x) {
+  if (start === end) return x >= end ? 1 : 0;
+  const t = clamp((x - start) / (end - start), 0, 1);
+  return t * t * (3 - 2 * t);
+}
+
+function easeOutQuart(t) {
+  return 1 - Math.pow(1 - t, 4);
+}
+
+function hexToRGBA(hex, alpha) {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r},${g},${b},${a})`;
+  return `rgba(${r},${g},${b},${alpha})`;
 }
 
 function quadBezierPt(t, x0, y0, cx, cy, x1, y1) {
@@ -438,7 +541,52 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-/* ─── Animation Loop ─────────────────────────────────────── */
+function getRiskColor(level) {
+  if (level === 'red') return '#ef4444';
+  if (level === 'amber') return '#f59e0b';
+  return '#94a3b8';
+}
+
+function buildMacroAnchors() {
+  macroAnchors.length = 0;
+  const count = CLUSTERS.length;
+  const ringLift = count <= 3 ? 1.1 : 1;
+
+  for (let i = 0; i < count; i++) {
+    const angle = -Math.PI / 2 + (Math.PI * 2 * i) / count;
+    macroAnchors.push({
+      angle,
+      x: Math.cos(angle) * MACRO_RING_X * ringLift,
+      y: Math.sin(angle) * MACRO_RING_Y * ringLift,
+      swayAmp: 1.1 + Math.random() * 1.1,
+      swaySpeed: 0.13 + Math.random() * 0.11
+    });
+  }
+}
+
+function computeClusterWorldPositions(time, s1) {
+  const swirl = Math.sin(time * 0.12) * 0.22;
+  const blend = Math.pow(s1, 0.84);
+
+  return CLUSTERS.map((cluster, ci) => {
+    const anchor = macroAnchors[ci];
+    const rotA = anchor.angle + swirl;
+    const ringX = anchor.x * Math.cos(swirl) - anchor.y * Math.sin(swirl);
+    const ringY = anchor.x * Math.sin(swirl) + anchor.y * Math.cos(swirl);
+    const driftX = Math.cos(time * anchor.swaySpeed + ci * 1.37) * anchor.swayAmp;
+    const driftY = Math.sin(time * anchor.swaySpeed * 0.82 + ci * 1.71) * anchor.swayAmp * 0.76;
+
+    const macroX = ringX + driftX + Math.cos(rotA * 2.0 + time * 0.08) * 0.7;
+    const macroY = ringY + driftY + Math.sin(rotA * 1.6 + time * 0.07) * 0.5;
+
+    return {
+      x: lerp(macroX, cluster.x, blend),
+      y: lerp(macroY, cluster.y, blend),
+      macroX,
+      macroY
+    };
+  });
+}
 
 function animate() {
   animFrame = requestAnimationFrame(animate);
@@ -446,405 +594,597 @@ function animate() {
   const time = Date.now() * 0.001;
   const elapsed = time - initTime;
 
-  // Entrance: quartic ease-out over 2.5s
-  const entrance = Math.min(1, elapsed / 2.5);
-  const ent = 1 - Math.pow(1 - entrance, 4);
+  const entrance = clamp(elapsed / 2.8, 0, 1);
+  const ent = easeOutQuart(entrance);
 
-  // Smooth zoom (cinematic)
-  currentZoom += (targetZoom - currentZoom) * 0.10;
+  currentZoom += (targetZoom - currentZoom) * 0.12;
 
-  // Mouse parallax (gentle follow)
-  mouseNormX += (mouseTargetX - mouseNormX) * 0.03;
-  mouseNormY += (mouseTargetY - mouseNormY) * 0.03;
-  const parallax = 1.5;
+  mouseNormX += (mouseTargetX - mouseNormX) * 0.032;
+  mouseNormY += (mouseTargetY - mouseNormY) * 0.032;
 
-  // Camera with parallax
-  camera.position.x += (panX + mouseNormX * parallax - camera.position.x) * 0.08;
-  camera.position.y += (-panY - mouseNormY * parallax - camera.position.y) * 0.08;
-  camera.position.z += ((110 / currentZoom) - camera.position.z) * 0.10;
+  const s1 = smoothStep(1.1, 2.0, currentZoom);
+  const s2 = smoothStep(2.0, 3.15, currentZoom);
+
+  const parallax = lerp(1.8, 1.0, smoothStep(1.2, 3.1, currentZoom));
+  const targetCamX = panX + mouseNormX * parallax;
+  const targetCamY = -panY - mouseNormY * parallax + s2 * 1.4;
+  const targetCamZ = (118 / currentZoom) - s2 * 8;
+
+  camera.position.x += (targetCamX - camera.position.x) * 0.085;
+  camera.position.y += (targetCamY - camera.position.y) * 0.085;
+  camera.position.z += (targetCamZ - camera.position.z) * 0.1;
+  camera.lookAt(camera.position.x * 0.05, camera.position.y * 0.05, 0);
 
   if (particlesMesh) {
-    particlesMesh.rotation.y = Math.sin(time * 0.08) * 0.04;
+    particlesMesh.rotation.y = Math.sin(time * 0.05) * 0.05;
+    particlesMesh.rotation.x = Math.cos(time * 0.04) * 0.02;
     particlesMesh.material.uniforms.uTime.value = time;
   }
 
-  // Zoom interpolation factors
-  let s1 = (currentZoom - 1.2) / 0.6;
-  s1 = Math.max(0, Math.min(1, s1));
-  s1 = s1 < 0.5 ? 2 * s1 * s1 : 1 - Math.pow(-2 * s1 + 2, 2) / 2;
+  const clusterWorld = computeClusterWorldPositions(time, s1);
+  const subSpread = lerp(0.36, 1, s1);
+  const microSpread = lerp(0.32, 1, s2);
 
-  let s2 = (currentZoom - 2.2) / 0.6;
-  s2 = Math.max(0, Math.min(1, s2));
-  s2 = s2 < 0.5 ? 2 * s2 * s2 : 1 - Math.pow(-2 * s2 + 2, 2) / 2;
-
-  // Update particle positions with orbital motion + drift
   const pos = particlesMesh.geometry.attributes.position.array;
   for (let i = 0; i < PARTICLE_COUNT; i++) {
     const p = particleData[i];
+    const base = clusterWorld[p.cIdx];
 
-    // Orbital rotation (XZ plane)
     const orbA = time * p.orbitSpeed;
     const cosA = Math.cos(orbA);
     const sinA = Math.sin(orbA);
 
-    // Organic drift
     const dt = time * p.driftSpeed;
     const dX = Math.sin(dt + p.phase) * p.driftAmp;
-    const dY = Math.cos(dt * 0.7 + p.phase * 1.3) * p.driftAmp;
-    const dZ = Math.sin(dt * 0.5 + p.phase * 2.1) * p.driftAmp * 0.3;
+    const dY = Math.cos(dt * 0.72 + p.phase * 1.3) * p.driftAmp;
+    const dZ = Math.sin(dt * 0.5 + p.phase * 2.0) * p.driftAmp * 0.3;
 
-    // Level 1: cluster cloud (with orbital rotation + drift, scaled by entrance)
     const r1x = p.l1x * cosA - p.l1z * sinA;
     const r1z = p.l1x * sinA + p.l1z * cosA;
-    const l1X = p.c.x + (r1x + dX) * ent;
-    const l1Y = p.c.y + (p.l1y + dY) * ent;
+    const l1X = base.x + (r1x + dX) * ent;
+    const l1Y = base.y + (p.l1y + dY) * ent;
     const l1Z = (r1z + dZ) * ent;
 
-    // Level 2: sub-topic cloud
     const r2x = p.l2x * cosA - p.l2z * sinA;
     const r2z = p.l2x * sinA + p.l2z * cosA;
-    const l2X = p.c.x + p.s.offX + r2x + dX * 0.5;
-    const l2Y = p.c.y + p.s.offY + p.l2y + dY * 0.5;
-    const l2Z = r2z + dZ * 0.5;
+    const l2X = base.x + p.sub.offX * subSpread + r2x + dX * 0.45;
+    const l2Y = base.y + p.sub.offY * subSpread + p.l2y + dY * 0.45;
+    const l2Z = r2z + dZ * 0.45;
 
-    // Level 3: micro cloud
-    const l3X = p.c.x + p.s.offX + p.m.offX + p.l3x + dX * 0.3;
-    const l3Y = p.c.y + p.s.offY + p.m.offY + p.l3y + dY * 0.3;
+    const l3X = base.x + p.sub.offX * subSpread + p.mic.offX * microSpread + p.l3x + dX * 0.3;
+    const l3Y = base.y + p.sub.offY * subSpread + p.mic.offY * microSpread + p.l3y + dY * 0.3;
     const l3Z = p.l3z + dZ * 0.3;
 
-    // Arc motion during transitions
-    const arc1 = Math.sin(s1 * Math.PI) * 3;
-    const arc2 = Math.sin(s2 * Math.PI) * 1.5;
+    const arc1 = Math.sin(s1 * Math.PI) * 2.8;
+    const arc2 = Math.sin(s2 * Math.PI) * 1.6;
 
-    let cx = lerp(l1X, l2X, s1);
-    let cy = lerp(l1Y, l2Y, s1);
-    let cz = lerp(l1Z, l2Z, s1) + arc1;
+    let x = lerp(l1X, l2X, s1);
+    let y = lerp(l1Y, l2Y, s1);
+    let z = lerp(l1Z, l2Z, s1) + arc1;
 
     if (s2 > 0) {
-      cx = lerp(cx, l3X, s2);
-      cy = lerp(cy, l3Y, s2);
-      cz = lerp(cz, l3Z, s2) + arc2;
+      x = lerp(x, l3X, s2);
+      y = lerp(y, l3Y, s2);
+      z = lerp(z, l3Z, s2) + arc2;
     }
 
-    pos[i * 3] = cx;
-    pos[i * 3 + 1] = cy;
-    pos[i * 3 + 2] = cz;
+    pos[i * 3] = x;
+    pos[i * 3 + 1] = y;
+    pos[i * 3 + 2] = z;
   }
   particlesMesh.geometry.attributes.position.needsUpdate = true;
 
   renderer.render(scene, camera);
-  drawHUD(s1, s2, time, ent);
+  drawHUD(s1, s2, time, ent, clusterWorld);
 }
 
-/* ─── HUD Rendering ──────────────────────────────────────── */
-
-function drawHUD(s1, s2, time, ent) {
+function drawHUD(s1, s2, time, ent, clusterWorld) {
   hudCtx.clearRect(0, 0, width, height);
-  hitRegions = [];
+  hitRegions.length = 0;
 
-  // ── Deep vignette ──
-  const vg = hudCtx.createRadialGradient(
-    width / 2, height / 2, width * 0.12,
-    width / 2, height / 2, width * 0.72
-  );
-  vg.addColorStop(0, 'transparent');
-  vg.addColorStop(1, 'rgba(5, 6, 7, 0.6)');
-  hudCtx.fillStyle = vg;
-  hudCtx.fillRect(0, 0, width, height);
+  drawBackdrop(time, s1, s2, ent);
 
-  // ── Subtle center warmth ──
-  const hazeR = Math.max(width, height) * 0.35;
-  const haze = hudCtx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, hazeR);
-  haze.addColorStop(0, 'rgba(255, 153, 102, 0.012)');
-  haze.addColorStop(0.5, 'rgba(255, 153, 102, 0.004)');
-  haze.addColorStop(1, 'transparent');
-  hudCtx.fillStyle = haze;
-  hudCtx.fillRect(0, 0, width, height);
+  const clusterScreens = CLUSTERS.map((cluster, ci) => {
+    const world = clusterWorld[ci];
+    const projected = project(world.x, world.y, 0);
+    return {
+      cluster,
+      ci,
+      world,
+      sx: projected.x,
+      sy: projected.y,
+      z: projected.z,
+      visible: projected.z >= -1 && projected.z <= 1
+    };
+  });
 
-  // ── Clusters ──
-  CLUSTERS.forEach((c, ci) => {
-    const cp = project(c.x, c.y, 0);
-    if (cp.z > 1 || cp.z < -1) return;
-    const sx = cp.x, sy = cp.y;
+  drawClusterBridges(clusterScreens, time, s1, ent);
 
-    const breathe = 1.0 + Math.sin(time * 0.7 + ci * 2.1) * 0.1;
-    const nodeVis = ent * (s1 < 1 ? (1 - s1 * 0.25) : 0.75);
+  const subSpread = lerp(0.36, 1, s1);
+  const microSpread = lerp(0.32, 1, s2);
 
-    // ── Core Node: outer nebula glow ──
-    const outerR = 60 * breathe;
-    hudCtx.globalAlpha = nodeVis * 0.14;
-    const outerGlow = hudCtx.createRadialGradient(sx, sy, 0, sx, sy, outerR);
-    outerGlow.addColorStop(0, hexToRGBA(c.color, 0.35));
-    outerGlow.addColorStop(0.35, hexToRGBA(c.color, 0.08));
-    outerGlow.addColorStop(1, 'transparent');
-    hudCtx.fillStyle = outerGlow;
+  clusterScreens.forEach(state => {
+    if (!state.visible) return;
+
+    const c = state.cluster;
+    const ci = state.ci;
+    const sx = state.sx;
+    const sy = state.sy;
+
+    const pulse = 1 + Math.sin(time * 0.72 + ci * 1.85) * 0.1;
+    const clusterVis = ent * (1 - s1 * 0.16);
+
+    const outerR = 76 * pulse * (1 - s1 * 0.26);
+    hudCtx.globalAlpha = clusterVis * 0.18;
+    const outer = hudCtx.createRadialGradient(sx, sy, 0, sx, sy, outerR);
+    outer.addColorStop(0, hexToRGBA(c.color, 0.35));
+    outer.addColorStop(0.42, hexToRGBA(c.color, 0.11));
+    outer.addColorStop(1, 'transparent');
+    hudCtx.fillStyle = outer;
     hudCtx.beginPath();
     hudCtx.arc(sx, sy, outerR, 0, Math.PI * 2);
     hudCtx.fill();
 
-    // ── Core Node: inner star ──
-    const innerR = 14 * breathe;
-    hudCtx.globalAlpha = nodeVis * 0.55;
-    const innerGlow = hudCtx.createRadialGradient(sx, sy, 0, sx, sy, innerR);
-    innerGlow.addColorStop(0, 'rgba(255,255,255,0.92)');
-    innerGlow.addColorStop(0.2, hexToRGBA(c.color, 0.5));
-    innerGlow.addColorStop(1, 'transparent');
-    hudCtx.fillStyle = innerGlow;
+    hudCtx.globalAlpha = clusterVis * 0.3;
+    hudCtx.strokeStyle = hexToRGBA(c.color, 0.7);
+    hudCtx.lineWidth = 1.1;
+    hudCtx.beginPath();
+    hudCtx.arc(sx, sy, 16 + Math.sin(time * 0.55 + ci) * 1.8, 0, Math.PI * 2);
+    hudCtx.stroke();
+
+    const innerR = 12.5 * pulse;
+    hudCtx.globalAlpha = clusterVis * 0.62;
+    const inner = hudCtx.createRadialGradient(sx, sy, 0, sx, sy, innerR);
+    inner.addColorStop(0, 'rgba(255,255,255,0.92)');
+    inner.addColorStop(0.25, hexToRGBA(c.color, 0.62));
+    inner.addColorStop(1, 'transparent');
+    hudCtx.fillStyle = inner;
     hudCtx.beginPath();
     hudCtx.arc(sx, sy, innerR, 0, Math.PI * 2);
     hudCtx.fill();
 
-    // ── Core Node: crisp center dot ──
-    hudCtx.globalAlpha = nodeVis * 0.92;
+    hudCtx.globalAlpha = clusterVis * 0.92;
     hudCtx.fillStyle = '#ffffff';
     hudCtx.beginPath();
-    hudCtx.arc(sx, sy, 2.5 * breathe, 0, Math.PI * 2);
+    hudCtx.arc(sx, sy, 2.35 * pulse, 0, Math.PI * 2);
     hudCtx.fill();
 
-    // ── Orbit ring (visible during zoom into sub-topics) ──
-    if (s1 > 0.05) {
-      const avgDist = c.subTopics.reduce((sum, sub) => {
-        const sp = project(c.x + sub.offX, c.y + sub.offY, 0);
-        return sum + Math.sqrt((sp.x - sx) ** 2 + (sp.y - sy) ** 2);
-      }, 0) / c.subTopics.length;
-
-      hudCtx.globalAlpha = s1 * 0.05 * ent;
-      hudCtx.strokeStyle = hexToRGBA(c.color, 0.5);
-      hudCtx.lineWidth = 0.5;
-      hudCtx.beginPath();
-      hudCtx.arc(sx, sy, avgDist, 0, Math.PI * 2);
-      hudCtx.stroke();
-    }
-
-    // ── Cluster labels (Macro level) ──
-    if (s1 < 1.0) {
-      const la = (1 - s1) * ent;
-      hudCtx.globalAlpha = la;
-
-      hudCtx.font = '650 14px "Sora", sans-serif';
-      hudCtx.textAlign = 'center';
-      hudCtx.fillStyle = c.color;
-      hudCtx.fillText(c.label, sx, sy - 32);
-
-      // Score + risk dot
+    if (s1 < 0.98) {
+      const labelAlpha = (1 - smoothStep(0.0, 0.95, s1)) * ent;
       const avgScore = getClusterAvgScore(c);
-      const scoreStr = `${avgScore > 0 ? '+' : ''}${avgScore}`;
-      hudCtx.font = '400 10px "IBM Plex Mono", monospace';
-      const scoreW = hudCtx.measureText(scoreStr).width;
-
-      // Risk dot
-      const riskColor = c.riskLevel === 'red' ? '#ef4444' : c.riskLevel === 'amber' ? '#f59e0b' : '#94a3b8';
-      hudCtx.fillStyle = riskColor;
-      hudCtx.beginPath();
-      hudCtx.arc(sx - scoreW / 2 - 8, sy - 20, 2.5, 0, Math.PI * 2);
-      hudCtx.fill();
-
-      // Score text
-      hudCtx.fillStyle = 'rgba(148, 163, 184, 0.65)';
-      hudCtx.fillText(scoreStr, sx, sy - 17);
-
-      // Hit region
-      hudCtx.font = '650 14px "Sora", sans-serif';
-      const nameW = hudCtx.measureText(c.label).width;
+      const score = `${avgScore > 0 ? '+' : ''}${avgScore.toFixed(2)}`;
+      const box = drawClusterPill({
+        x: sx,
+        y: sy - 60,
+        title: c.label,
+        score,
+        subCount: c.subTopics.length,
+        accent: c.color,
+        riskLevel: c.riskLevel,
+        alpha: labelAlpha
+      });
       hitRegions.push({
-        x: sx - nameW / 2 - 12, y: sy - 46, w: nameW + 24, h: 42,
+        x: box.x,
+        y: box.y,
+        w: box.w,
+        h: box.h,
         action: () => openClusterSheet(c)
       });
     }
 
-    // ── Sub-topic layer ──
-    if (s1 > 0.01) {
-      c.subTopics.forEach((sub, si) => {
-        const sp = project(c.x + sub.offX, c.y + sub.offY, 0);
-        const ssx = sp.x, ssy = sp.y;
+    if (s1 < 0.06) return;
 
-        let a = s1 * ent;
-        if (s2 > 0) a = s1 * (1 - s2 * 0.5) * ent;
+    c.subTopics.forEach((sub, si) => {
+      const subWobble = (1 - s1 * 0.5) * 0.5;
+      const subWorldX = state.world.x + sub.offX * subSpread + Math.sin(time * 0.58 + si * 1.9) * subWobble;
+      const subWorldY = state.world.y + sub.offY * subSpread + Math.cos(time * 0.53 + si * 1.4) * subWobble;
+      const sp = project(subWorldX, subWorldY, 0);
+      if (sp.z > 1 || sp.z < -1) return;
 
-        // ── Bezier connection ──
-        const dx = ssx - sx, dy = ssy - sy;
-        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-        const perpX = -dy / dist;
-        const perpY = dx / dist;
-        const curvature = dist * 0.14 * (si % 2 === 0 ? 1 : -1);
-        const cpx = (sx + ssx) / 2 + perpX * curvature;
-        const cpy = (sy + ssy) / 2 + perpY * curvature;
+      const ssx = sp.x;
+      const ssy = sp.y;
 
-        // Curve path
-        hudCtx.globalAlpha = a * 0.10;
-        hudCtx.strokeStyle = hexToRGBA(c.color, 1);
-        hudCtx.lineWidth = 1;
-        hudCtx.setLineDash([1.5, 5]);
-        hudCtx.lineDashOffset = -time * 14;
+      let subAlpha = s1 * ent;
+      subAlpha *= 1 - s2 * 0.42;
+      if (subAlpha <= 0.01) return;
+
+      const dx = ssx - sx;
+      const dy = ssy - sy;
+      const dist = Math.hypot(dx, dy) || 1;
+      const perpX = -dy / dist;
+      const perpY = dx / dist;
+      const curv = dist * 0.16 * (si % 2 === 0 ? 1 : -1);
+      const cpx = (sx + ssx) * 0.5 + perpX * curv;
+      const cpy = (sy + ssy) * 0.5 + perpY * curv;
+
+      hudCtx.globalAlpha = subAlpha * 0.15;
+      hudCtx.strokeStyle = hexToRGBA(c.color, 0.92);
+      hudCtx.lineWidth = 1.05;
+      hudCtx.setLineDash([2, 7]);
+      hudCtx.lineDashOffset = -time * 14 - si * 4;
+      hudCtx.beginPath();
+      hudCtx.moveTo(sx, sy);
+      hudCtx.quadraticCurveTo(cpx, cpy, ssx, ssy);
+      hudCtx.stroke();
+      hudCtx.setLineDash([]);
+
+      const tVal = (time * (0.11 + si * 0.024) + si * 0.27) % 1;
+      const pulsePt = quadBezierPt(tVal, sx, sy, cpx, cpy, ssx, ssy);
+      hudCtx.globalAlpha = subAlpha * 0.48;
+      const pulseGlow = hudCtx.createRadialGradient(pulsePt.x, pulsePt.y, 0, pulsePt.x, pulsePt.y, 5.2);
+      pulseGlow.addColorStop(0, hexToRGBA(c.color, 0.86));
+      pulseGlow.addColorStop(0.38, hexToRGBA(c.color, 0.2));
+      pulseGlow.addColorStop(1, 'transparent');
+      hudCtx.fillStyle = pulseGlow;
+      hudCtx.beginPath();
+      hudCtx.arc(pulsePt.x, pulsePt.y, 5.2, 0, Math.PI * 2);
+      hudCtx.fill();
+
+      const subPulse = 1 + Math.sin(time * 0.92 + si * 1.8) * 0.09;
+      const subR = 21 * subPulse;
+      hudCtx.globalAlpha = subAlpha * 0.22;
+      const subGlow = hudCtx.createRadialGradient(ssx, ssy, 0, ssx, ssy, subR);
+      subGlow.addColorStop(0, hexToRGBA(c.color, 0.35));
+      subGlow.addColorStop(0.5, hexToRGBA(c.color, 0.06));
+      subGlow.addColorStop(1, 'transparent');
+      hudCtx.fillStyle = subGlow;
+      hudCtx.beginPath();
+      hudCtx.arc(ssx, ssy, subR, 0, Math.PI * 2);
+      hudCtx.fill();
+
+      hudCtx.globalAlpha = subAlpha * 0.84;
+      hudCtx.fillStyle = '#f8fbff';
+      hudCtx.beginPath();
+      hudCtx.arc(ssx, ssy, 1.9, 0, Math.PI * 2);
+      hudCtx.fill();
+
+      const subLabelAlpha = subAlpha * (1 - smoothStep(0.72, 0.94, s2));
+      if (subLabelAlpha > 0.03) {
+        const box = drawSubPill({
+          x: ssx,
+          y: ssy + 14,
+          text: sub.label,
+          accent: c.color,
+          alpha: subLabelAlpha
+        });
+        hitRegions.push({
+          x: box.x,
+          y: box.y,
+          w: box.w,
+          h: box.h,
+          action: () => openSubSheet(sub, c)
+        });
+      }
+
+      if (s2 < 0.04) return;
+
+      sub.micro.forEach((mic, mi) => {
+        const microWobble = (1 - s2 * 0.6) * 0.28;
+        const microX =
+          state.world.x +
+          sub.offX * subSpread +
+          mic.offX * microSpread +
+          Math.sin(time * 0.82 + mi * 1.2) * microWobble;
+        const microY =
+          state.world.y +
+          sub.offY * subSpread +
+          mic.offY * microSpread +
+          Math.cos(time * 0.78 + mi * 1.6) * microWobble;
+        const mp = project(microX, microY, 0);
+        if (mp.z > 1 || mp.z < -1) return;
+
+        const msx = mp.x;
+        const msy = mp.y;
+        const mAlpha = s2 * ent;
+        if (mAlpha <= 0.01) return;
+
+        const mdx = msx - ssx;
+        const mdy = msy - ssy;
+        const mDist = Math.hypot(mdx, mdy) || 1;
+        const mPerpX = -mdy / mDist;
+        const mPerpY = mdx / mDist;
+        const mCurve = mDist * 0.12 * (mi % 2 === 0 ? 1 : -1);
+        const mCpx = (ssx + msx) * 0.5 + mPerpX * mCurve;
+        const mCpy = (ssy + msy) * 0.5 + mPerpY * mCurve;
+
+        hudCtx.globalAlpha = mAlpha * 0.1;
+        hudCtx.strokeStyle = hexToRGBA(c.color, 0.85);
+        hudCtx.lineWidth = 0.65;
         hudCtx.beginPath();
-        hudCtx.moveTo(sx, sy);
-        hudCtx.quadraticCurveTo(cpx, cpy, ssx, ssy);
+        hudCtx.moveTo(ssx, ssy);
+        hudCtx.quadraticCurveTo(mCpx, mCpy, msx, msy);
         hudCtx.stroke();
-        hudCtx.setLineDash([]);
 
-        // ── Traveling light pulse ──
-        const tSpeed = 0.10 + si * 0.025;
-        const tVal = ((time * tSpeed + si * 0.35) % 1.0);
-        const dot = quadBezierPt(tVal, sx, sy, cpx, cpy, ssx, ssy);
-
-        hudCtx.globalAlpha = a * 0.55;
-        const dotR = 5;
-        const dotGlow = hudCtx.createRadialGradient(dot.x, dot.y, 0, dot.x, dot.y, dotR);
-        dotGlow.addColorStop(0, hexToRGBA(c.color, 0.85));
-        dotGlow.addColorStop(0.35, hexToRGBA(c.color, 0.2));
-        dotGlow.addColorStop(1, 'transparent');
-        hudCtx.fillStyle = dotGlow;
+        const mT = (time * 0.085 + mi * 0.33) % 1;
+        const mPt = quadBezierPt(mT, ssx, ssy, mCpx, mCpy, msx, msy);
+        hudCtx.globalAlpha = mAlpha * 0.36;
+        const mGlow = hudCtx.createRadialGradient(mPt.x, mPt.y, 0, mPt.x, mPt.y, 3.2);
+        mGlow.addColorStop(0, hexToRGBA(c.color, 0.7));
+        mGlow.addColorStop(1, 'transparent');
+        hudCtx.fillStyle = mGlow;
         hudCtx.beginPath();
-        hudCtx.arc(dot.x, dot.y, dotR, 0, Math.PI * 2);
+        hudCtx.arc(mPt.x, mPt.y, 3.2, 0, Math.PI * 2);
         hudCtx.fill();
 
-        // ── Sub-topic node glow ──
-        const subB = 1.0 + Math.sin(time * 0.9 + si * 1.7) * 0.08;
-        const subR = 22 * subB;
-        hudCtx.globalAlpha = a * 0.2;
-        const subGlow = hudCtx.createRadialGradient(ssx, ssy, 0, ssx, ssy, subR);
-        subGlow.addColorStop(0, hexToRGBA(c.color, 0.35));
-        subGlow.addColorStop(0.45, hexToRGBA(c.color, 0.06));
-        subGlow.addColorStop(1, 'transparent');
-        hudCtx.fillStyle = subGlow;
+        hudCtx.globalAlpha = mAlpha * 0.58;
+        hudCtx.fillStyle = hexToRGBA(c.color, 0.58);
         hudCtx.beginPath();
-        hudCtx.arc(ssx, ssy, subR, 0, Math.PI * 2);
+        hudCtx.arc(msx, msy, 1.35, 0, Math.PI * 2);
         hudCtx.fill();
 
-        // Sub-topic core dot
-        hudCtx.globalAlpha = a * 0.85;
-        hudCtx.fillStyle = '#ffffff';
-        hudCtx.beginPath();
-        hudCtx.arc(ssx, ssy, 1.8, 0, Math.PI * 2);
-        hudCtx.fill();
+        hitRegions.push({
+          x: msx - 8,
+          y: msy - 8,
+          w: 16,
+          h: 16,
+          action: () => openMicroSheet(mic, sub, c)
+        });
 
-        // ── Sub-topic label card ──
-        if (s2 < 0.8) {
-          hudCtx.globalAlpha = a;
-          hudCtx.font = '600 11px "Manrope", sans-serif';
-          const tw = hudCtx.measureText(sub.label).width;
-          const pad = 12;
-          const boxX = ssx - tw / 2 - pad;
-          const boxY = ssy + 14;
-          const boxW = tw + pad * 2;
-          const boxH = 28;
-
-          // Card background
-          hudCtx.fillStyle = 'rgba(13, 16, 20, 0.82)';
-          roundRect(hudCtx, boxX, boxY, boxW, boxH, 8);
-          hudCtx.fill();
-
-          // Subtle border
-          hudCtx.globalAlpha = a * 0.10;
-          hudCtx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-          hudCtx.lineWidth = 0.5;
-          roundRect(hudCtx, boxX, boxY, boxW, boxH, 8);
-          hudCtx.stroke();
-
-          // Bottom accent line
-          hudCtx.globalAlpha = a * 0.45;
-          hudCtx.fillStyle = c.color;
-          roundRect(hudCtx, boxX + 3, boxY + boxH - 2, boxW - 6, 1.5, 0.75);
-          hudCtx.fill();
-
-          // Label text
-          hudCtx.globalAlpha = a * 0.95;
-          hudCtx.fillStyle = '#f4f7fb';
-          hudCtx.textAlign = 'center';
-          hudCtx.fillText(sub.label, ssx, boxY + 18);
-
-          hitRegions.push({
-            x: boxX, y: boxY, w: boxW, h: boxH,
-            action: () => openSubSheet(sub, c)
+        const microLabelAlpha = mAlpha * smoothStep(0.24, 0.62, s2);
+        if (microLabelAlpha > 0.03) {
+          const chip = drawMicroTag({
+            x: msx,
+            y: msy,
+            text: mic.label,
+            accent: c.color,
+            alpha: microLabelAlpha
           });
-        }
-
-        // ── Micro-narratives ──
-        if (s2 > 0.01) {
-          sub.micro.forEach((mic, mi) => {
-            const mp = project(c.x + sub.offX + mic.offX, c.y + sub.offY + mic.offY, 0);
-            const msx = mp.x, msy = mp.y;
-
-            // Connection to parent sub-topic
-            const mdx = msx - ssx, mdy = msy - ssy;
-            const mDist = Math.sqrt(mdx * mdx + mdy * mdy) || 1;
-            const mPerpX = -mdy / mDist;
-            const mPerpY = mdx / mDist;
-            const mCurve = mDist * 0.1 * (mi % 2 === 0 ? 1 : -1);
-            const mCpx = (ssx + msx) / 2 + mPerpX * mCurve;
-            const mCpy = (ssy + msy) / 2 + mPerpY * mCurve;
-
-            hudCtx.globalAlpha = s2 * ent * 0.07;
-            hudCtx.strokeStyle = hexToRGBA(c.color, 0.8);
-            hudCtx.lineWidth = 0.5;
-            hudCtx.beginPath();
-            hudCtx.moveTo(ssx, ssy);
-            hudCtx.quadraticCurveTo(mCpx, mCpy, msx, msy);
-            hudCtx.stroke();
-
-            // Micro traveling dot
-            const mT = ((time * 0.08 + mi * 0.5) % 1.0);
-            const mDot = quadBezierPt(mT, ssx, ssy, mCpx, mCpy, msx, msy);
-            hudCtx.globalAlpha = s2 * ent * 0.35;
-            const mDotR = 3;
-            const mDotGlow = hudCtx.createRadialGradient(mDot.x, mDot.y, 0, mDot.x, mDot.y, mDotR);
-            mDotGlow.addColorStop(0, hexToRGBA(c.color, 0.7));
-            mDotGlow.addColorStop(1, 'transparent');
-            hudCtx.fillStyle = mDotGlow;
-            hudCtx.beginPath();
-            hudCtx.arc(mDot.x, mDot.y, mDotR, 0, Math.PI * 2);
-            hudCtx.fill();
-
-            // Micro node dot
-            hudCtx.globalAlpha = s2 * ent * 0.6;
-            hudCtx.fillStyle = hexToRGBA(c.color, 0.55);
-            hudCtx.beginPath();
-            hudCtx.arc(msx, msy, 1.3, 0, Math.PI * 2);
-            hudCtx.fill();
-
-            // Micro label chip
-            hudCtx.globalAlpha = s2 * ent;
-            hudCtx.font = '450 10px "IBM Plex Mono", monospace';
-            const mtw = hudCtx.measureText(mic.label).width;
-            const mx = msx + 7, my = msy - 8, mw = mtw + 14, mh = 19;
-
-            hudCtx.fillStyle = 'rgba(8, 10, 14, 0.82)';
-            roundRect(hudCtx, mx, my, mw, mh, 5);
-            hudCtx.fill();
-
-            hudCtx.globalAlpha = s2 * ent * 0.07;
-            hudCtx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
-            hudCtx.lineWidth = 0.5;
-            roundRect(hudCtx, mx, my, mw, mh, 5);
-            hudCtx.stroke();
-
-            hudCtx.globalAlpha = s2 * ent * 0.88;
-            hudCtx.fillStyle = 'rgba(203, 213, 225, 0.92)';
-            hudCtx.textAlign = 'left';
-            hudCtx.fillText(mic.label, msx + 14, msy + 3);
-
-            hitRegions.push({
-              x: mx, y: my, w: mw, h: mh,
-              action: () => openMicroSheet(mic, sub, c)
-            });
+          hitRegions.push({
+            x: chip.x,
+            y: chip.y,
+            w: chip.w,
+            h: chip.h,
+            action: () => openMicroSheet(mic, sub, c)
           });
         }
       });
-    }
-
-    hudCtx.globalAlpha = 1.0;
+    });
   });
+
+  hudCtx.globalAlpha = 1;
+  hudCtx.setLineDash([]);
 }
 
-/* ─── Resize ─────────────────────────────────────────────── */
+function drawBackdrop(time, s1, s2, ent) {
+  const cx = width * 0.5;
+  const cy = height * 0.52;
+
+  const wash = hudCtx.createLinearGradient(0, 0, 0, height);
+  wash.addColorStop(0, 'rgba(10,14,20,0.56)');
+  wash.addColorStop(1, 'rgba(4,7,11,0.3)');
+  hudCtx.fillStyle = wash;
+  hudCtx.fillRect(0, 0, width, height);
+
+  const shimmerX = cx + Math.sin(time * 0.18) * width * 0.12;
+  const shimmerY = cy + Math.cos(time * 0.15) * height * 0.1;
+  const shimmer = hudCtx.createRadialGradient(
+    shimmerX,
+    shimmerY,
+    0,
+    shimmerX,
+    shimmerY,
+    Math.max(width, height) * 0.58
+  );
+  shimmer.addColorStop(0, 'rgba(255,175,130,0.07)');
+  shimmer.addColorStop(0.45, 'rgba(148,163,184,0.03)');
+  shimmer.addColorStop(1, 'transparent');
+  hudCtx.globalAlpha = 0.82 * ent;
+  hudCtx.fillStyle = shimmer;
+  hudCtx.fillRect(0, 0, width, height);
+
+  const holeR = Math.min(width, height) * (0.15 + (1 - s1) * 0.05);
+  hudCtx.globalAlpha = 0.82;
+  hudCtx.fillStyle = 'rgba(4,7,10,0.52)';
+  hudCtx.beginPath();
+  hudCtx.arc(cx, cy, holeR, 0, Math.PI * 2);
+  hudCtx.fill();
+
+  hudCtx.globalAlpha = (1 - s2 * 0.56) * 0.42;
+  hudCtx.strokeStyle = 'rgba(226,232,240,0.16)';
+  hudCtx.lineWidth = 1.2;
+  hudCtx.beginPath();
+  hudCtx.arc(cx, cy, holeR + 3.5, 0, Math.PI * 2);
+  hudCtx.stroke();
+
+  const vignette = hudCtx.createRadialGradient(cx, cy, width * 0.16, cx, cy, width * 0.78);
+  vignette.addColorStop(0, 'transparent');
+  vignette.addColorStop(1, 'rgba(3,5,8,0.72)');
+  hudCtx.globalAlpha = 0.9;
+  hudCtx.fillStyle = vignette;
+  hudCtx.fillRect(0, 0, width, height);
+  hudCtx.globalAlpha = 1;
+}
+
+function drawClusterBridges(clusterScreens, time, s1, ent) {
+  const macroAlpha = ent * (1 - s1 * 0.72);
+  if (macroAlpha <= 0.02) return;
+
+  let pairIndex = 0;
+  for (let i = 0; i < clusterScreens.length; i++) {
+    const a = clusterScreens[i];
+    if (!a.visible) continue;
+    for (let j = i + 1; j < clusterScreens.length; j++) {
+      const b = clusterScreens[j];
+      if (!b.visible) continue;
+
+      const dx = b.sx - a.sx;
+      const dy = b.sy - a.sy;
+      const dist = Math.hypot(dx, dy) || 1;
+      const perpX = -dy / dist;
+      const perpY = dx / dist;
+      const mx = (a.sx + b.sx) * 0.5;
+      const my = (a.sy + b.sy) * 0.5;
+
+      const inwardX = (width * 0.5 - mx) * 0.4;
+      const inwardY = (height * 0.52 - my) * 0.4;
+      const bend = Math.min(110, dist * 0.35) * (pairIndex % 2 === 0 ? 1 : -1);
+      const cpx = mx + inwardX + perpX * bend;
+      const cpy = my + inwardY + perpY * bend;
+
+      const grad = hudCtx.createLinearGradient(a.sx, a.sy, b.sx, b.sy);
+      grad.addColorStop(0, hexToRGBA(a.cluster.color, 0.9));
+      grad.addColorStop(0.5, 'rgba(203,213,225,0.46)');
+      grad.addColorStop(1, hexToRGBA(b.cluster.color, 0.9));
+
+      hudCtx.globalAlpha = macroAlpha * 0.15;
+      hudCtx.strokeStyle = grad;
+      hudCtx.lineWidth = 1.15;
+      hudCtx.setLineDash([2, 8]);
+      hudCtx.lineDashOffset = -time * 16 - pairIndex * 5;
+      hudCtx.beginPath();
+      hudCtx.moveTo(a.sx, a.sy);
+      hudCtx.quadraticCurveTo(cpx, cpy, b.sx, b.sy);
+      hudCtx.stroke();
+      hudCtx.setLineDash([]);
+
+      hudCtx.globalAlpha = macroAlpha * 0.06;
+      hudCtx.strokeStyle = 'rgba(203,213,225,0.34)';
+      hudCtx.lineWidth = 0.7;
+      hudCtx.beginPath();
+      hudCtx.moveTo(a.sx, a.sy);
+      hudCtx.quadraticCurveTo(cpx, cpy, b.sx, b.sy);
+      hudCtx.stroke();
+
+      const t = (time * (0.06 + pairIndex * 0.007) + pairIndex * 0.23) % 1;
+      const pulse = quadBezierPt(t, a.sx, a.sy, cpx, cpy, b.sx, b.sy);
+      hudCtx.globalAlpha = macroAlpha * 0.5;
+      const pulseGlow = hudCtx.createRadialGradient(pulse.x, pulse.y, 0, pulse.x, pulse.y, 6.2);
+      pulseGlow.addColorStop(0, 'rgba(255,255,255,0.82)');
+      pulseGlow.addColorStop(0.28, hexToRGBA(a.cluster.color, 0.35));
+      pulseGlow.addColorStop(1, 'transparent');
+      hudCtx.fillStyle = pulseGlow;
+      hudCtx.beginPath();
+      hudCtx.arc(pulse.x, pulse.y, 6.2, 0, Math.PI * 2);
+      hudCtx.fill();
+
+      pairIndex++;
+    }
+  }
+
+  hudCtx.globalAlpha = 1;
+  hudCtx.setLineDash([]);
+}
+
+function drawClusterPill({ x, y, title, score, subCount, accent, riskLevel, alpha }) {
+  if (alpha <= 0.01) return { x: x - 1, y, w: 2, h: 2 };
+
+  hudCtx.globalAlpha = alpha;
+  hudCtx.font = '650 11px "Sora", sans-serif';
+  const titleWidth = hudCtx.measureText(title).width;
+  hudCtx.font = '500 10px "IBM Plex Mono", monospace';
+  const metaText = `${score} | ${subCount} narratives`;
+  const metaWidth = hudCtx.measureText(metaText).width;
+
+  const w = Math.max(titleWidth, metaWidth + 12) + 24;
+  const h = 40;
+  const boxX = x - w / 2;
+  const boxY = y;
+
+  hudCtx.fillStyle = 'rgba(8,11,16,0.86)';
+  roundRect(hudCtx, boxX, boxY, w, h, 10);
+  hudCtx.fill();
+
+  hudCtx.globalAlpha = alpha * 0.5;
+  hudCtx.strokeStyle = hexToRGBA(accent, 0.72);
+  hudCtx.lineWidth = 0.85;
+  roundRect(hudCtx, boxX, boxY, w, h, 10);
+  hudCtx.stroke();
+
+  hudCtx.globalAlpha = alpha * 0.22;
+  hudCtx.fillStyle = hexToRGBA(accent, 0.9);
+  roundRect(hudCtx, boxX + 5, boxY + h - 2, w - 10, 1.2, 1);
+  hudCtx.fill();
+
+  hudCtx.globalAlpha = alpha * 0.98;
+  hudCtx.font = '650 11px "Sora", sans-serif';
+  hudCtx.fillStyle = '#eaf0f9';
+  hudCtx.textAlign = 'center';
+  hudCtx.fillText(title, x, boxY + 14);
+
+  hudCtx.font = '500 10px "IBM Plex Mono", monospace';
+  hudCtx.fillStyle = 'rgba(194,201,214,0.88)';
+  hudCtx.fillText(metaText, x + 5, boxY + 29);
+
+  hudCtx.fillStyle = getRiskColor(riskLevel);
+  hudCtx.beginPath();
+  hudCtx.arc(x - metaWidth / 2 - 9, boxY + 25.5, 2.4, 0, Math.PI * 2);
+  hudCtx.fill();
+
+  hudCtx.globalAlpha = 1;
+  return { x: boxX, y: boxY, w, h };
+}
+
+function drawSubPill({ x, y, text, accent, alpha }) {
+  hudCtx.globalAlpha = alpha;
+  hudCtx.font = '600 11px "Manrope", sans-serif';
+  const tw = hudCtx.measureText(text).width;
+  const w = tw + 24;
+  const h = 27;
+  const boxX = x - w / 2;
+  const boxY = y;
+
+  hudCtx.fillStyle = 'rgba(10,13,19,0.84)';
+  roundRect(hudCtx, boxX, boxY, w, h, 8);
+  hudCtx.fill();
+
+  hudCtx.globalAlpha = alpha * 0.45;
+  hudCtx.strokeStyle = hexToRGBA(accent, 0.82);
+  hudCtx.lineWidth = 0.72;
+  roundRect(hudCtx, boxX, boxY, w, h, 8);
+  hudCtx.stroke();
+
+  hudCtx.globalAlpha = alpha * 0.18;
+  hudCtx.fillStyle = hexToRGBA(accent, 0.96);
+  roundRect(hudCtx, boxX + 4, boxY + h - 2, w - 8, 1.2, 1);
+  hudCtx.fill();
+
+  hudCtx.globalAlpha = alpha * 0.98;
+  hudCtx.fillStyle = '#f3f7ff';
+  hudCtx.textAlign = 'center';
+  hudCtx.fillText(text, x, boxY + 17);
+
+  hudCtx.globalAlpha = 1;
+  return { x: boxX, y: boxY, w, h };
+}
+
+function drawMicroTag({ x, y, text, accent, alpha }) {
+  hudCtx.globalAlpha = alpha;
+  hudCtx.font = '500 10px "IBM Plex Mono", monospace';
+  const tw = hudCtx.measureText(text).width;
+  const w = tw + 14;
+  const h = 19;
+  const boxX = x + 7;
+  const boxY = y - 9;
+
+  hudCtx.fillStyle = 'rgba(7,10,15,0.84)';
+  roundRect(hudCtx, boxX, boxY, w, h, 5);
+  hudCtx.fill();
+
+  hudCtx.globalAlpha = alpha * 0.2;
+  hudCtx.strokeStyle = hexToRGBA(accent, 0.92);
+  hudCtx.lineWidth = 0.62;
+  roundRect(hudCtx, boxX, boxY, w, h, 5);
+  hudCtx.stroke();
+
+  hudCtx.globalAlpha = alpha * 0.9;
+  hudCtx.fillStyle = 'rgba(218,227,238,0.95)';
+  hudCtx.textAlign = 'left';
+  hudCtx.fillText(text, boxX + 7, boxY + 13);
+
+  hudCtx.globalAlpha = 1;
+  return { x: boxX, y: boxY, w, h };
+}
 
 function onResize() {
-  if (!container || !renderer) return;
+  if (!container || !renderer || !hudCanvas || !hudCtx) return;
+
   width = container.clientWidth;
-  height = container.clientHeight - 48;
+  height = Math.max(1, container.clientHeight - VIEW_TOP_OFFSET);
+
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
   renderer.setSize(width, height);
+
   const dpr = Math.min(window.devicePixelRatio, 2);
   hudCanvas.width = width * dpr;
   hudCanvas.height = height * dpr;
@@ -854,17 +1194,16 @@ function onResize() {
   hudCtx.scale(dpr, dpr);
 }
 
-/* ─── List View ──────────────────────────────────────────── */
-
 function renderListView(listLayer) {
   listLayer.innerHTML = '';
 
   const totalNarratives = CLUSTERS.reduce((n, c) => n + c.subTopics.length, 0);
   const heading = document.createElement('div');
-  heading.style.cssText = 'padding:var(--sp-4) 0 var(--sp-16); margin-bottom:var(--sp-4); border-bottom:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between;';
+  heading.style.cssText =
+    'padding:var(--sp-4) 0 var(--sp-16); margin-bottom:var(--sp-4); border-bottom:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between;';
   heading.innerHTML = `
     <span style="font-family:var(--font-display); font-size:var(--text-md); font-weight:650; color:var(--text-primary);">Top Narratives</span>
-    <span style="font-size:var(--text-xs); color:var(--text-secondary);">${totalNarratives} Narrative · 3 Cluster</span>
+    <span style="font-size:var(--text-xs); color:var(--text-secondary);">${totalNarratives} Narrative | 3 Cluster</span>
   `;
   listLayer.appendChild(heading);
 
@@ -904,16 +1243,32 @@ function renderListView(listLayer) {
   });
 }
 
-/* ─── Cleanup ────────────────────────────────────────────── */
-
 export function destroyConstellation() {
   if (animFrame) cancelAnimationFrame(animFrame);
   animFrame = null;
+
   window.removeEventListener('resize', onResize);
+  clearInteractionListeners();
+
+  if (particlesMesh) {
+    if (particlesMesh.geometry) particlesMesh.geometry.dispose();
+    if (particlesMesh.material) {
+      const texture = particlesMesh.material.uniforms?.pointTexture?.value;
+      if (texture) texture.dispose();
+      particlesMesh.material.dispose();
+    }
+  }
+
   if (renderer) renderer.dispose();
+
   scene = null;
   camera = null;
   renderer = null;
   particlesMesh = null;
+  hudCanvas = null;
+  hudCtx = null;
+
   particleData.length = 0;
+  macroAnchors.length = 0;
+  hitRegions.length = 0;
 }
