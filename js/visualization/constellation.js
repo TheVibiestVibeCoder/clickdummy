@@ -2,7 +2,7 @@
    CONSTELLATION MAP - Luxe orbital narrative graph
    ============================================================ */
 
-import { CLUSTERS, getClusterAvgScore, getSentimentColor, sparkPoints } from '../data.js';
+import { CLUSTERS, NRI, getClusterAvgScore, getSentimentColor, sparkPoints } from '../data.js';
 import { openClusterSheet, openSubSheet, openMicroSheet } from '../components/side-sheet.js';
 
 const VIEW_TOP_OFFSET = 48;
@@ -43,6 +43,7 @@ const particleData = [];
 const macroAnchors = [];
 const hitRegions = [];
 const interactionCleanup = [];
+const clusterNriMap = buildClusterNriMap();
 
 let container;
 let canvasGL;
@@ -385,8 +386,11 @@ function setupInteraction() {
       return;
     }
 
-    panX -= (e.clientX - lastMouseX) * 0.06;
-    panY -= (e.clientY - lastMouseY) * 0.06;
+    const panSpeed = 0.1 / Math.max(currentZoom, 0.35);
+    panX -= (e.clientX - lastMouseX) * panSpeed;
+    panY -= (e.clientY - lastMouseY) * panSpeed;
+    panX = clamp(panX, -120, 120);
+    panY = clamp(panY, -120, 120);
     lastMouseX = e.clientX;
     lastMouseY = e.clientY;
   });
@@ -412,8 +416,11 @@ function setupInteraction() {
     if (e.target === interactionLayer) e.preventDefault();
 
     if (e.touches.length === 1 && isDragging) {
-      panX -= (e.touches[0].clientX - lastMouseX) * 0.2;
-      panY -= (e.touches[0].clientY - lastMouseY) * 0.2;
+      const panSpeed = 0.28 / Math.max(currentZoom, 0.35);
+      panX -= (e.touches[0].clientX - lastMouseX) * panSpeed;
+      panY -= (e.touches[0].clientY - lastMouseY) * panSpeed;
+      panX = clamp(panX, -120, 120);
+      panY = clamp(panY, -120, 120);
       lastMouseX = e.touches[0].clientX;
       lastMouseY = e.touches[0].clientY;
     } else if (e.touches.length === 2) {
@@ -547,6 +554,27 @@ function getRiskColor(level) {
   return '#94a3b8';
 }
 
+function buildClusterNriMap() {
+  const map = new Map();
+  if (!CLUSTERS.length) return map;
+
+  const overallNri = typeof NRI?.score === 'number' ? NRI.score : 67;
+  const entries = CLUSTERS.map(cluster => {
+    const weight = Math.max(1, cluster.subTopics.length);
+    return { cluster, avg: getClusterAvgScore(cluster), weight };
+  });
+  const totalWeight = entries.reduce((sum, e) => sum + e.weight, 0) || 1;
+  const weightedMean = entries.reduce((sum, e) => sum + e.avg * e.weight, 0) / totalWeight;
+  const sensitivity = 30;
+
+  entries.forEach(({ cluster, avg }) => {
+    const score = overallNri + (avg - weightedMean) * sensitivity;
+    map.set(cluster.id, score);
+  });
+
+  return map;
+}
+
 function buildMacroAnchors() {
   macroAnchors.length = 0;
   const count = CLUSTERS.length;
@@ -604,16 +632,20 @@ function animate() {
 
   const s1 = smoothStep(1.0, 2.1, currentZoom);
   const s2 = smoothStep(2.2, 4.2, currentZoom);
+  const layback = smoothStep(1.4, 4.0, currentZoom);
 
-  const parallax = lerp(1.8, 1.0, smoothStep(1.2, 3.1, currentZoom));
-  const targetCamX = panX + mouseNormX * parallax;
-  const targetCamY = -panY - mouseNormY * parallax + s2 * 1.4;
+  const parallax = lerp(0.42, 0.22, smoothStep(1.2, 3.1, currentZoom));
+  const pointerFollow = isDragging ? 0 : 1;
+  const targetCamX = panX + mouseNormX * parallax * pointerFollow;
+  const targetCamY = -panY - mouseNormY * parallax * pointerFollow + s2 * 1.4 + layback * 14;
   const targetCamZ = (132 / currentZoom) - s2 * 12;
 
   camera.position.x += (targetCamX - camera.position.x) * 0.085;
   camera.position.y += (targetCamY - camera.position.y) * 0.085;
   camera.position.z += (targetCamZ - camera.position.z) * 0.1;
-  camera.lookAt(camera.position.x * 0.05, camera.position.y * 0.05, 0);
+  const lookX = camera.position.x + layback * -6;
+  const lookY = camera.position.y - layback * 36;
+  camera.lookAt(lookX, lookY, 0);
 
   if (particlesMesh) {
     particlesMesh.rotation.y = Math.sin(time * 0.05) * 0.05;
@@ -752,8 +784,8 @@ function drawHUD(s1, s2, time, ent, clusterWorld) {
 
     if (s1 < 0.98) {
       const labelAlpha = (1 - smoothStep(0.0, 0.95, s1)) * ent;
-      const avgScore = getClusterAvgScore(c);
-      const score = `${avgScore > 0 ? '+' : ''}${avgScore.toFixed(2)}`;
+      const clusterNri = clusterNriMap.get(c.id) ?? NRI.score ?? 67;
+      const score = clusterNri.toFixed(1);
       const box = drawClusterPill({
         x: sx,
         y: sy - 60,
@@ -1074,7 +1106,7 @@ function drawClusterPill({ x, y, title, score, subCount, accent, riskLevel, alph
   hudCtx.font = '650 11px "Sora", sans-serif';
   const titleWidth = hudCtx.measureText(title).width;
   hudCtx.font = '500 10px "IBM Plex Mono", monospace';
-  const metaText = `${score} | ${subCount} narratives`;
+  const metaText = `NRI ${score} | ${subCount} narratives`;
   const metaWidth = hudCtx.measureText(metaText).width;
 
   const w = Math.max(titleWidth, metaWidth + 12) + 24;

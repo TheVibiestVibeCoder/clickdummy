@@ -30,13 +30,13 @@ export function renderActors(container) {
         <canvas id="actor-canvas" style="width:100%; height:100%; background:radial-gradient(circle at 50% 45%, rgba(255,153,102,0.12) 0%, rgba(255,153,102,0.04) 42%, rgba(255,153,102,0) 76%);"></canvas>
       </div>
 
-      <div style="display:flex; flex-direction:column; gap:var(--sp-16); overflow-y:auto;">
-        <div class="panel" data-animate>
+      <div style="display:flex; flex-direction:column; gap:var(--sp-16); overflow-y:auto; min-height:0; padding-right:var(--sp-4);">
+        <div class="panel" data-animate style="display:flex; flex-direction:column; min-height:0;">
           <div class="panel__header">
             <span class="panel__title">Key Actors</span>
             <span class="panel__badge">${ACTORS.length} tracked</span>
           </div>
-          <div id="actors-list" style="display:flex; flex-direction:column; gap:var(--sp-8); position:relative; z-index:2;"></div>
+          <div id="actors-list" style="display:flex; flex-direction:column; gap:var(--sp-8); position:relative; z-index:2; overflow-y:auto; min-height:0; max-height:clamp(260px, 52vh, 620px); padding-right:var(--sp-4);"></div>
         </div>
 
         <div class="panel" data-animate>
