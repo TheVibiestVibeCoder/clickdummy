@@ -208,11 +208,36 @@ export const ALL_MICROS = ALL_SUBTOPICS.flatMap(s =>
 
 // Early warnings (top 5 most volatile)
 export const EARLY_WARNINGS = [
-  { title: 'Zahlungsstreik-Kampagne', delta: '+340% Mentions (48h)', risk: 'red', subId: 's1' },
-  { title: 'Fernwärme Monopol-Debatte', delta: '+180% Velocity', risk: 'red', subId: 's2' },
-  { title: 'Baustellen-Frustration', delta: 'Neue Quelle: AK', risk: 'amber', subId: 's5' },
-  { title: 'Smart Meter Datenschutz', delta: 'Telegram Crosspost', risk: 'amber', subId: 's7' },
-  { title: 'Ladesäulen Transdanubien', delta: '+45% Engagement', risk: 'neutral', subId: 's6' }
+  {
+    title: 'Strompreise: Jahresabrechnungen Q1/2026',
+    delta: 'NRI-Velocity Haupttreiber (+8 Pkt.). AK-Pressekonferenz erzeugte Pickup in KZ, ORF, Heute innerhalb 4h. Sentiment-Score: −0.65.',
+    risk: 'red',
+    subId: 's1'
+  },
+  {
+    title: 'Fernwärme: Preisindexbindung März 2026',
+    delta: 'Mentions +180% in 48h. r/Wien-Thread: 450 Upvotes. Mietervereinigung mobilisiert. Erster Der Standard-Artikel gesetzt.',
+    risk: 'red',
+    subId: 's2'
+  },
+  {
+    title: 'Fernwärme-Ausbau: Straßensperren Bezirke 16+17',
+    delta: 'Sentiment −0.30 → −0.55 in 72h. Nextdoor als neue Plattform aktiv. FB-Bezirksgruppen: 45% Share of Voice.',
+    risk: 'amber',
+    subId: 's5'
+  },
+  {
+    title: 'Smart Meter: Datenschutz-Crosspost Telegram',
+    delta: '3 Kanäle, 800 Mitglieder. Crosspost-Muster identifiziert. Futurezone-Redaktionsanfrage eingegangen.',
+    risk: 'amber',
+    subId: 's7'
+  },
+  {
+    title: 'Ladeinfrastruktur: Verfügbarkeit Transdanubien',
+    delta: 'Engagement +45% (GoingElectric Forum). Positives E-Mobilitäts-Narrativ zeigt erste Negativeintrübung bei Verfügbarkeit in 21./22. Bezirk.',
+    risk: 'neutral',
+    subId: 's6'
+  }
 ];
 
 // Fake evidence trail events
