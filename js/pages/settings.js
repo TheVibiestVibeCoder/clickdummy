@@ -7,7 +7,7 @@ import { animatePageEnter, staggerIn, showToast } from '../motion.js';
 
 export function renderSettings(container) {
   container.innerHTML = `
-    <div style="max-width:900px;">
+    <div class="settings-page">
       <div style="margin-bottom:var(--sp-32);">
         <h2 style="font-size:var(--text-xl);">Settings & Data Sources</h2>
         <p style="font-size:var(--text-sm); color:var(--text-secondary); margin-top:var(--sp-4);">EU-sovereign hosting, source configuration, and compliance settings</p>

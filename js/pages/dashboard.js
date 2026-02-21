@@ -10,28 +10,28 @@ import { openSubSheet } from '../components/side-sheet.js';
 const NRI_INFO = {
   overall: {
     title: 'Narrative Risk Index (NRI)',
-    means: 'Composite governance metric translating discourse dynamics into measurable institutional exposure.',
-    measures: 'Likelihood that fragmented discourse transitions into coordinated institutional pressure.'
+    means: 'Zusammengesetzte Governance-Metrik, die Diskursdynamiken in messbare institutionelle Exposition uebersetzt.',
+    measures: 'Wahrscheinlichkeit, dass fragmentierter Diskurs in koordinierten institutionellen Druck uebergeht.'
   },
   velocity: {
     title: 'Narrative Convergence Velocity',
-    means: 'Rate at which independent actor clusters align around a shared narrative frame.',
-    measures: 'How quickly message alignment can turn diffuse chatter into coordinated pressure.'
+    means: 'Geschwindigkeit, mit der sich unabhaengige Akteurscluster auf einen gemeinsamen Narrativrahmen ausrichten.',
+    measures: 'Wie schnell aus diffuser Diskussion abgestimmter Druck entstehen kann.'
   },
   proximity: {
     title: 'Institutional Proximity',
-    means: 'Weighted presence of regulatory, financial, political, or high-reach actors in the narrative cluster.',
-    measures: 'How close the narrative is to institutions that can trigger real-world consequences.'
+    means: 'Gewichtete Praesenz regulatorischer, finanzieller, politischer oder reichweitenstarker Akteure im Narrativcluster.',
+    measures: 'Wie nah das Narrativ an Institutionen ist, die reale Auswirkungen ausloesen koennen.'
   },
   sentiment: {
     title: 'Sentiment Acceleration',
-    means: 'Speed and direction of tonal shifts toward delegitimization or destabilization.',
-    measures: 'Whether tone is intensifying and how rapidly that acceleration is building.'
+    means: 'Geschwindigkeit und Richtung tonalitaeter Verschiebungen hin zu Delegitimierung oder Destabilisierung.',
+    measures: 'Ob sich die Tonalitaet verschaerft und wie schnell diese Beschleunigung zunimmt.'
   },
   expansion: {
     title: 'Network Expansion',
-    means: 'Cross-sector and cross-platform propagation intensity.',
-    measures: 'How widely and quickly the narrative is spreading across channels and actor types.'
+    means: 'Ausbreitungsintensitaet ueber Sektoren und Plattformen hinweg.',
+    measures: 'Wie breit und wie schnell sich das Narrativ ueber Kanaele und Akteurstypen verbreitet.'
   }
 };
 
@@ -39,10 +39,10 @@ export function renderDashboard(container) {
   const trendData = Array.isArray(NRI.trend4w) && NRI.trend4w.length >= 4
     ? NRI.trend4w
     : [
-      { label: 'Jan 31', score: 61 },
-      { label: 'Feb 07', score: 63 },
-      { label: 'Feb 14', score: 66 },
-      { label: 'Feb 21', score: 67 }
+      { label: '31. Jan', score: 61 },
+      { label: '07. Feb', score: 63 },
+      { label: '14. Feb', score: 66 },
+      { label: '21. Feb', score: 67 }
     ];
   const trendStats = buildTrendStats(trendData);
 
@@ -54,9 +54,9 @@ export function renderDashboard(container) {
             <div class="panel__header nri-hero__header">
               <span class="panel__title">Narrative Risk Index (NRI)</span>
               <div class="nri-hero__header-actions">
-                <button class="nri-trend-btn" id="nri-trend-btn" type="button">4W Development</button>
-                <button class="nri-info-btn" data-info-key="overall" aria-label="NRI info" type="button">i</button>
-                <span class="panel__badge">24h rolling</span>
+                <button class="nri-trend-btn" id="nri-trend-btn" type="button">4W Entwicklung</button>
+                <button class="nri-info-btn" data-info-key="overall" aria-label="NRI Info" type="button">i</button>
+                <span class="panel__badge">24h rollierend</span>
               </div>
             </div>
             <div class="nri-hero__score-block" style="margin-top:var(--sp-12);">
@@ -89,11 +89,11 @@ export function renderDashboard(container) {
       <div class="dash-quellen panel" data-animate style="display:flex; flex-direction:column;">
         <div class="panel__header">
           <span class="panel__title">Quellen-Status</span>
-          <span class="panel__badge">Live</span>
+          <span class="panel__badge">Echtzeit</span>
         </div>
         <div style="display:flex; align-items:baseline; gap:var(--sp-8); position:relative; z-index:2;">
           <div class="text-metric" id="source-count">0</div>
-          <div style="font-size:var(--text-xs); color:var(--text-secondary);">Posts/24h</div>
+          <div style="font-size:var(--text-xs); color:var(--text-secondary);">Beitraege/24h</div>
         </div>
         <div style="margin-top:auto; height:50px; display:flex; align-items:flex-end; gap:3px; padding-top:var(--sp-12); position:relative; z-index:2;">
           ${[40, 70, 50, 92, 60, 80, 45].map((h, i) => `
@@ -104,7 +104,7 @@ export function renderDashboard(container) {
 
       <div class="dash-warning panel" data-animate style="overflow:hidden; display:flex; flex-direction:column;">
         <div class="panel__header">
-          <span class="panel__title">Early Warning Inbox</span>
+          <span class="panel__title">Fruehwarn-Inbox</span>
           <span class="panel__badge">Top 5</span>
         </div>
         <div class="warning-list" id="warning-list" style="position:relative; z-index:2; overflow-y:auto; flex:1;"></div>
@@ -115,30 +115,30 @@ export function renderDashboard(container) {
       <div class="nri-trend-modal" role="dialog" aria-modal="true" aria-labelledby="nri-trend-title">
         <div class="nri-trend-modal__header">
           <div>
-            <div class="panel__title" style="margin-bottom:4px;">NRI Development</div>
-            <div class="nri-trend-modal__title" id="nri-trend-title">Last 4 Weeks</div>
+            <div class="panel__title" style="margin-bottom:4px;">NRI-Entwicklung</div>
+            <div class="nri-trend-modal__title" id="nri-trend-title">Letzte 4 Wochen</div>
           </div>
-          <button class="nri-trend-modal__close" id="nri-trend-close" type="button" aria-label="Close NRI development">&times;</button>
+          <button class="nri-trend-modal__close" id="nri-trend-close" type="button" aria-label="NRI-Entwicklung schliessen">&times;</button>
         </div>
 
         <div class="nri-trend-modal__body">
           ${buildTrendChartMarkup(trendData)}
           <div class="nri-trend-stats">
             <div class="nri-trend-stat">
-              <span class="nri-trend-stat__label">Net Change</span>
+              <span class="nri-trend-stat__label">Nettoveraenderung</span>
               <span class="nri-trend-stat__value">${formatSigned(trendStats.net)}</span>
             </div>
             <div class="nri-trend-stat">
-              <span class="nri-trend-stat__label">Weekly Avg</span>
+              <span class="nri-trend-stat__label">Wochenmittel</span>
               <span class="nri-trend-stat__value">${trendStats.avg.toFixed(1)}</span>
             </div>
             <div class="nri-trend-stat">
-              <span class="nri-trend-stat__label">Range</span>
+              <span class="nri-trend-stat__label">Spannweite</span>
               <span class="nri-trend-stat__value">${trendStats.range.toFixed(1)}</span>
             </div>
           </div>
           <div class="nri-trend-note">
-            NRI quantifies when discourse transitions toward coordinated institutional pressure, not just mention volume.
+            NRI quantifiziert, wann sich Diskurs in koordinierten institutionellen Druck verschiebt - nicht nur Erwaehnungsvolumen.
           </div>
         </div>
       </div>
@@ -147,17 +147,17 @@ export function renderDashboard(container) {
     <div class="nri-info-overlay" id="nri-info-overlay" aria-hidden="true">
       <div class="nri-info-modal" role="dialog" aria-modal="true" aria-labelledby="nri-info-title">
         <div class="nri-info-modal__header">
-          <div class="panel__title">NRI Metric Explainer</div>
-          <button class="nri-info-modal__close" id="nri-info-close" type="button" aria-label="Close metric explainer">&times;</button>
+          <div class="panel__title">NRI-Metrikerklaerung</div>
+          <button class="nri-info-modal__close" id="nri-info-close" type="button" aria-label="Metrikerklaerung schliessen">&times;</button>
         </div>
         <div class="nri-info-modal__body">
           <div class="nri-info-modal__title" id="nri-info-title"></div>
           <div class="nri-info-modal__line">
-            <span>Means</span>
+            <span>Bedeutet</span>
             <p id="nri-info-means"></p>
           </div>
           <div class="nri-info-modal__line">
-            <span>Measures</span>
+            <span>Misst</span>
             <p id="nri-info-measures"></p>
           </div>
         </div>
@@ -292,12 +292,12 @@ function renderWarnings(container) {
     const item = document.createElement('div');
     item.className = 'warning-item';
     item.innerHTML = `
-      <span class="risk-badge ${w.risk === 'red' ? 'risk-badge--red' : w.risk === 'amber' ? 'risk-badge--amber' : 'risk-badge--neutral'}">${w.risk === 'red' ? 'HIGH' : w.risk === 'amber' ? 'MED' : 'LOW'}</span>
+      <span class="risk-badge ${w.risk === 'red' ? 'risk-badge--red' : w.risk === 'amber' ? 'risk-badge--amber' : 'risk-badge--neutral'}">${w.risk === 'red' ? 'HOCH' : w.risk === 'amber' ? 'MITTEL' : 'NIEDRIG'}</span>
       <div class="warning-item__content">
         <div class="warning-item__title">${w.title}</div>
         <div class="warning-item__delta">${w.delta}</div>
       </div>
-      <div class="warning-item__cta">Evidence</div>
+      <div class="warning-item__cta">Evidenz</div>
     `;
 
     item.addEventListener('click', () => {
@@ -346,7 +346,7 @@ function buildTrendChartMarkup(data) {
 
   return `
     <div class="nri-trend-chart">
-      <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-label="NRI 4 week development chart">
+      <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-label="NRI Verlauf der letzten 4 Wochen">
         <defs>
           <linearGradient id="nri-area-grad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="rgba(255,153,102,0.32)"></stop>

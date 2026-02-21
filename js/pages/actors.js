@@ -454,6 +454,7 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
   function toRuntimeDataset(baseData) {
     const actors = baseData.actors || [];
     const connections = baseData.connections || [];
+    const nodeScale = computeNodeScale(actors.length);
 
     const reachValues = actors.map(actor => parseReach(actor.reach));
     const minReach = reachValues.length ? Math.min(...reachValues) : 0;
@@ -478,8 +479,8 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
       1
     );
 
-    const anchors = buildAnchors(actors, state.w, state.h, normalizeInfluence);
-    const particles = buildParticles(actors, anchors, normalizeInfluence);
+    const anchors = buildAnchors(actors, state.w, state.h, normalizeInfluence, nodeScale);
+    const particles = buildParticles(actors, anchors, normalizeInfluence, nodeScale);
 
     return {
       base: baseData,
@@ -487,6 +488,7 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
       connections,
       normalizeReach,
       normalizeInfluence,
+      nodeScale,
       anchors,
       particles,
       actorByName: new Map(actors.map((actor, index) => [actor.name, index]))
@@ -685,7 +687,7 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
   };
 }
 
-function buildAnchors(actors, w, h, normalizeReach) {
+function buildAnchors(actors, w, h, normalizeReach, nodeScale = 1) {
   const cx = w * 0.5;
   const cy = h * 0.54;
   const extent = Math.min(w, h);
@@ -719,8 +721,8 @@ function buildAnchors(actors, w, h, normalizeReach) {
       x: cx + Math.cos(angle) * radial,
       y: cy + Math.sin(angle) * radial * ySquash,
       angle,
-      ringRadius: 22 + reachNorm * 50,
-      nodeRadius: 4.2 + reachNorm * 9.2,
+      ringRadius: (22 + reachNorm * 50) * (0.86 + nodeScale * 0.22),
+      nodeRadius: (4.2 + reachNorm * 9.2) * nodeScale,
       drift: (entry.index + 1) * 0.56 + ringIndex * 0.18
     };
   });
@@ -728,14 +730,14 @@ function buildAnchors(actors, w, h, normalizeReach) {
   return anchors;
 }
 
-function buildParticles(actors, anchors, normalizeReach) {
+function buildParticles(actors, anchors, normalizeReach, nodeScale = 1) {
   const particles = [];
 
   anchors.forEach((anchor, actorIndex) => {
     if (!anchor || !actors[actorIndex]) return;
 
     const reachNorm = normalizeReach(actorIndex);
-    const count = 210 + Math.round(reachNorm * 260);
+    const count = Math.round((190 + reachNorm * 230) * (0.8 + nodeScale * 0.34));
 
     for (let i = 0; i < count; i++) {
       const r1 = hash01(actorIndex * 1711 + i * 313);
@@ -849,6 +851,11 @@ function drawParticles(ctx, state, dataset, dt, anchorProvider, alphaMult, activ
 function drawAnchors(ctx, state, dataset, anchorProvider, alphaMult, activeIndex) {
   if (!dataset || alphaMult <= 0.01) return;
 
+  const nodeScale = dataset.nodeScale || 1;
+  const actorCount = dataset.actors.length;
+  const dense = actorCount >= 12;
+  const crowded = actorCount >= 15;
+
   dataset.actors.forEach((actor, index) => {
     const anchor = anchorProvider(index);
     if (!anchor) return;
@@ -857,7 +864,7 @@ function drawAnchors(ctx, state, dataset, anchorProvider, alphaMult, activeIndex
     const isActive = activeIndex === index;
     const dimmed = activeIndex != null && !isActive;
 
-    const haloR = anchor.nodeRadius + 10 + Math.sin(performance.now() * 0.002 + anchor.drift) * 1.6;
+    const haloR = anchor.nodeRadius + (8 + nodeScale * 2.4) + Math.sin(performance.now() * 0.002 + anchor.drift) * 1.6;
     ctx.beginPath();
     ctx.arc(anchor.x, anchor.y, haloR, 0, Math.PI * 2);
     ctx.fillStyle = rgbaFromHex(actor.color, (isActive ? 0.22 : (dimmed ? 0.05 : 0.11)) * alphaMult);
@@ -873,22 +880,31 @@ function drawAnchors(ctx, state, dataset, anchorProvider, alphaMult, activeIndex
     ctx.fillStyle = dimmed ? `rgba(255,255,255,${(0.2 * alphaMult).toFixed(3)})` : rgbaFromHex(actor.color, alphaMult);
     ctx.fill();
 
-    const tx = anchor.x + Math.cos(anchor.angle) * (24 + reachNorm * 12);
-    const ty = anchor.y + Math.sin(anchor.angle) * (24 + reachNorm * 12);
+    const labelOffset = 20 + reachNorm * 11 + (1 - nodeScale) * 5;
+    const tx = anchor.x + Math.cos(anchor.angle) * labelOffset;
+    const ty = anchor.y + Math.sin(anchor.angle) * labelOffset;
+    const showReach = isActive || !dense;
+    const showName = isActive || !crowded || (activeIndex != null && !dimmed);
+    const displayName = crowded && !isActive ? compactActorName(actor.name) : actor.name;
+    const nameSize = clamp(9 + nodeScale * 2.6, 9, 12);
 
-    ctx.font = isActive ? '700 12px Manrope' : '600 11px Manrope';
+    if (!showName) return;
+
+    ctx.font = isActive ? `700 ${(nameSize + 1.1).toFixed(1)}px Manrope` : `600 ${nameSize.toFixed(1)}px Manrope`;
     ctx.textAlign = tx < anchor.x ? 'right' : 'left';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = dimmed
       ? `rgba(169,179,195,${(0.44 * alphaMult).toFixed(3)})`
       : `rgba(244,247,251,${(0.92 * alphaMult).toFixed(3)})`;
-    ctx.fillText(actor.name, tx, ty - 4);
+    ctx.fillText(displayName, tx, ty - (showReach ? 4 : 0));
 
-    ctx.font = '400 10px "IBM Plex Mono"';
-    ctx.fillStyle = dimmed
-      ? `rgba(127,138,156,${(0.5 * alphaMult).toFixed(3)})`
-      : `rgba(169,179,195,${(0.86 * alphaMult).toFixed(3)})`;
-    ctx.fillText(actor.reach, tx, ty + 10);
+    if (showReach) {
+      ctx.font = `400 ${clamp(nameSize - 1.2, 8, 10).toFixed(1)}px "IBM Plex Mono"`;
+      ctx.fillStyle = dimmed
+        ? `rgba(127,138,156,${(0.5 * alphaMult).toFixed(3)})`
+        : `rgba(169,179,195,${(0.86 * alphaMult).toFixed(3)})`;
+      ctx.fillText(actor.reach, tx, ty + 10);
+    }
   });
 }
 
@@ -916,6 +932,27 @@ function parseReach(label) {
   if (clean.endsWith('M')) return base * 1_000_000;
   if (clean.endsWith('K')) return base * 1_000;
   return Number.isFinite(base) ? base : 0;
+}
+
+function computeNodeScale(actorCount) {
+  const count = Math.max(1, actorCount);
+  return clamp(Math.pow(12 / Math.max(count, 8), 0.42), 0.74, 1.18);
+}
+
+function compactActorName(name) {
+  const max = 16;
+  if (name.length <= max) return name;
+
+  const tokens = name.split(/\s+/).filter(Boolean);
+  if (tokens.length > 1) {
+    const initialed = tokens.map((token, idx) => (idx < tokens.length - 1 ? `${token[0]}.` : token)).join(' ');
+    if (initialed.length <= max + 2) return initialed;
+
+    const acronym = tokens.map(token => token[0]).join('');
+    if (acronym.length >= 2 && acronym.length <= 6) return acronym;
+  }
+
+  return `${name.slice(0, max - 1)}...`;
 }
 
 function strengthLabel(weight) {

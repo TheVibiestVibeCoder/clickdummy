@@ -74,24 +74,24 @@ export function initConstellation(containerEl) {
   container.innerHTML = `
     <div class="viz-controls">
       <div style="display:flex; align-items:center; gap:var(--sp-12);">
-        <span class="panel__title">Constellation Map</span>
+        <span class="panel__title">Konstellationskarte</span>
         <div class="pill-group">
-          <button class="pill is-active" id="btn-graph">Graph</button>
+          <button class="pill is-active" id="btn-graph">Grafik</button>
           <button class="pill" id="btn-list">Liste</button>
         </div>
       </div>
       <div class="zoom-strip zoom-strip--constellation">
-        <span class="zoom-strip__label" id="zoom-readout">Macro</span>
-        <button class="zoom-strip__btn" id="zoom-out" aria-label="Zoom out">&minus;</button>
+        <span class="zoom-strip__label" id="zoom-readout">Makro</span>
+        <button class="zoom-strip__btn" id="zoom-out" aria-label="Rauszoomen">&minus;</button>
         <div class="zoom-strip__track-wrap">
           <input type="range" id="zoom-slider" min="0.35" max="4.8" step="0.01" value="1.0" />
           <div class="zoom-strip__stages" aria-hidden="true">
-            <span>Macro</span>
+            <span>Makro</span>
             <span>Sub</span>
-            <span>Micro</span>
+            <span>Mikro</span>
           </div>
         </div>
-        <button class="zoom-strip__btn" id="zoom-in" aria-label="Zoom in">+</button>
+        <button class="zoom-strip__btn" id="zoom-in" aria-label="Reinzoomen">+</button>
         <span class="zoom-strip__value" id="zoom-value">1.0x</span>
       </div>
     </div>
@@ -101,7 +101,7 @@ export function initConstellation(containerEl) {
       <canvas id="hud-canvas" class="constellation-hud"></canvas>
       <div id="interaction-layer" class="constellation-interaction"></div>
       <div id="map-fs-veil" class="constellation-fs-veil" aria-hidden="true"></div>
-      <button id="map-fullscreen-btn" class="constellation-fullscreen-btn" aria-label="Enter fullscreen" title="Fullscreen">&#x26F6;</button>
+      <button id="map-fullscreen-btn" class="constellation-fullscreen-btn" aria-label="Vollbild oeffnen" title="Vollbild">&#x26F6;</button>
     </div>
 
     <div id="list-layer" class="list-layer constellation-list-layer"></div>
@@ -145,7 +145,7 @@ export function initConstellation(containerEl) {
   });
 
   if (typeof THREE === 'undefined') {
-    zoomReadout.textContent = '3D Engine Offline';
+    zoomReadout.textContent = '3D-Engine offline';
     return destroyConstellation;
   }
 
@@ -211,8 +211,8 @@ export function initConstellation(containerEl) {
         wasFullscreen = isFullscreen;
 
         container.classList.toggle('is-map-fullscreen', isFullscreen);
-        fullscreenBtn.setAttribute('aria-label', isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen');
-        fullscreenBtn.setAttribute('title', isFullscreen ? 'Exit fullscreen' : 'Fullscreen');
+        fullscreenBtn.setAttribute('aria-label', isFullscreen ? 'Vollbild schliessen' : 'Vollbild oeffnen');
+        fullscreenBtn.setAttribute('title', isFullscreen ? 'Vollbild schliessen' : 'Vollbild');
         fullscreenBtn.innerHTML = isFullscreen ? '&#x2715;' : '&#x26F6;';
         onResize();
       };
@@ -530,10 +530,10 @@ function adjustZoom(delta) {
 function updateReadout() {
   zoomValue.textContent = targetZoom.toFixed(1) + 'x';
 
-  let stage = 'Macro';
+  let stage = 'Makro';
   let stageKey = 'macro';
   if (targetZoom >= 2.75) {
-    stage = 'Micro';
+    stage = 'Mikro';
     stageKey = 'micro';
   } else if (targetZoom >= 1.35) {
     stage = 'Sub-Cluster';
@@ -1288,7 +1288,7 @@ function renderListView(listLayer) {
   heading.style.cssText =
     'padding:var(--sp-4) 0 var(--sp-16); margin-bottom:var(--sp-4); border-bottom:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between;';
   heading.innerHTML = `
-    <span style="font-family:var(--font-display); font-size:var(--text-md); font-weight:650; color:var(--text-primary);">Top Narratives</span>
+    <span style="font-family:var(--font-display); font-size:var(--text-md); font-weight:650; color:var(--text-primary);">Top-Narrative</span>
     <span style="font-size:var(--text-xs); color:var(--text-secondary);">${totalNarratives} Narrative | 3 Cluster</span>
   `;
   listLayer.appendChild(heading);
