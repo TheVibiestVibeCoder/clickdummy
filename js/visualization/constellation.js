@@ -53,6 +53,7 @@ let zoomSlider;
 let zoomValue;
 let zoomReadout;
 let fullscreenBtn;
+let fullscreenVeil;
 
 export function initConstellation(containerEl) {
   container = containerEl;
@@ -99,6 +100,7 @@ export function initConstellation(containerEl) {
       <canvas id="webgl-canvas" class="constellation-webgl"></canvas>
       <canvas id="hud-canvas" class="constellation-hud"></canvas>
       <div id="interaction-layer" class="constellation-interaction"></div>
+      <div id="map-fs-veil" class="constellation-fs-veil" aria-hidden="true"></div>
       <button id="map-fullscreen-btn" class="constellation-fullscreen-btn" aria-label="Enter fullscreen" title="Fullscreen">&#x26F6;</button>
     </div>
 
@@ -112,6 +114,7 @@ export function initConstellation(containerEl) {
   zoomValue = container.querySelector('#zoom-value');
   zoomReadout = container.querySelector('#zoom-readout');
   fullscreenBtn = container.querySelector('#map-fullscreen-btn');
+  fullscreenVeil = container.querySelector('#map-fs-veil');
 
   const btnGraph = container.querySelector('#btn-graph');
   const btnList = container.querySelector('#btn-list');
@@ -183,8 +186,30 @@ export function initConstellation(containerEl) {
     container.querySelector('#zoom-out').addEventListener('click', () => adjustZoom(-0.15));
 
     if (fullscreenBtn && document.fullscreenEnabled) {
+      let wasFullscreen = document.fullscreenElement === container;
+
+      const playFullscreenTransition = (isEntering) => {
+        graphLayer.classList.remove('is-fs-enter', 'is-fs-exit');
+        void graphLayer.offsetWidth;
+        graphLayer.classList.add(isEntering ? 'is-fs-enter' : 'is-fs-exit');
+        setTimeout(() => {
+          graphLayer.classList.remove('is-fs-enter', 'is-fs-exit');
+        }, 760);
+
+        if (!fullscreenVeil) return;
+        fullscreenVeil.classList.remove('is-enter', 'is-exit');
+        void fullscreenVeil.offsetWidth;
+        fullscreenVeil.classList.add(isEntering ? 'is-enter' : 'is-exit');
+        setTimeout(() => {
+          fullscreenVeil.classList.remove('is-enter', 'is-exit');
+        }, 780);
+      };
+
       const syncFullscreenState = () => {
         const isFullscreen = document.fullscreenElement === container;
+        if (isFullscreen !== wasFullscreen) playFullscreenTransition(isFullscreen);
+        wasFullscreen = isFullscreen;
+
         container.classList.toggle('is-map-fullscreen', isFullscreen);
         fullscreenBtn.setAttribute('aria-label', isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen');
         fullscreenBtn.setAttribute('title', isFullscreen ? 'Exit fullscreen' : 'Fullscreen');

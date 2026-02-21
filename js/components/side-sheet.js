@@ -5,6 +5,21 @@
 import { CLUSTERS, getSentimentColor, getSentimentLabel, sparkPoints } from '../data.js';
 
 let overlay, sheet, sheetTitle, sheetBody, sheetTag;
+let hostRoot = null;
+
+function getSheetHost() {
+  return document.fullscreenElement || document.body;
+}
+
+function ensureSheetHost() {
+  const nextHost = getSheetHost();
+  if (!overlay || !sheet || !nextHost) return;
+  if (hostRoot === nextHost) return;
+
+  nextHost.appendChild(overlay);
+  nextHost.appendChild(sheet);
+  hostRoot = nextHost;
+}
 
 export function initSideSheet() {
   // Create DOM once
@@ -26,8 +41,7 @@ export function initSideSheet() {
     </div>
   `;
 
-  document.body.appendChild(overlay);
-  document.body.appendChild(sheet);
+  ensureSheetHost();
 
   sheetTitle = sheet.querySelector('#ss-title');
   sheetBody = sheet.querySelector('#ss-body');
@@ -38,9 +52,12 @@ export function initSideSheet() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeSideSheet();
   });
+  document.addEventListener('fullscreenchange', ensureSheetHost);
 }
 
 export function openSideSheet(data) {
+  ensureSheetHost();
+
   sheetTitle.textContent = data.title;
   sheetTag.textContent = data.type.toUpperCase();
 

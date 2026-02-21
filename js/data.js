@@ -7,9 +7,16 @@ export const NRI = {
   delta: +4.2,
   drivers: 'Getrieben durch Preisdebatte (+8 Velocity) und Fernwärme-Monopol Narrativ (neue Quelle: AK Pressekonferenz)',
   subscores: [
-    { key: 'velocity', label: 'Velocity', value: 72, color: 'var(--risk-amber)' },
-    { key: 'proximity', label: 'Proximity', value: 58, color: 'var(--accent)' },
-    { key: 'sentiment', label: 'Sentiment Accel.', value: 71, color: 'var(--risk-red)' }
+    { key: 'velocity', label: 'Convergence Velocity', value: 72, color: 'var(--risk-amber)' },
+    { key: 'proximity', label: 'Institutional Proximity', value: 58, color: 'var(--accent)' },
+    { key: 'sentiment', label: 'Sentiment Acceleration', value: 71, color: 'var(--risk-red)' },
+    { key: 'expansion', label: 'Network Expansion', value: 67, color: '#8e99ac' }
+  ],
+  trend4w: [
+    { label: 'Jan 31', score: 61 },
+    { label: 'Feb 07', score: 63 },
+    { label: 'Feb 14', score: 66 },
+    { label: 'Feb 21', score: 67 }
   ]
 };
 
@@ -261,7 +268,17 @@ export const ACTORS = [
   { name: 'r/Wien Community', role: 'Social / Forum', reach: '145K', color: '#ff8a54', initial: 'r/' },
   { name: 'FB Bezirksgruppen', role: 'Social / Local', reach: '320K', color: '#c2cada', initial: 'fb' },
   { name: 'VKI', role: 'Consumer Protection', reach: '890K', color: '#ffd3bc', initial: 'VKI' },
-  { name: 'Telegram Channels', role: 'Alt-Media', reach: '12K', color: '#8e99ac', initial: 'tg' }
+  { name: 'Telegram Channels', role: 'Alt-Media', reach: '12K', color: '#8e99ac', initial: 'tg' },
+  { name: 'E-Control', role: 'Regulator / Energy', reach: '540K', color: '#ffbc9e', initial: 'EC' },
+  { name: 'Wiener Stadtwerke', role: 'Institution / Utility', reach: '980K', color: '#f2a782', initial: 'WS' },
+  { name: 'Klimaschutzministerium', role: 'Political / Institution', reach: '1.1M', color: '#ffb98f', initial: 'BMK' },
+  { name: 'Futurezone', role: 'Tech Media', reach: '760K', color: '#d8b8a3', initial: 'FZ' },
+  { name: 'Mietervereinigung Wien', role: 'Civil Society', reach: '350K', color: '#ffc7ad', initial: 'MV' },
+  { name: 'Bezirkszeitung Wien', role: 'Local Media', reach: '540K', color: '#e4b190', initial: 'BZ' },
+  { name: 'LinkedIn Energy Voices', role: 'Social / Professional', reach: '270K', color: '#c5d2df', initial: 'in' },
+  { name: 'TikTok Wien News', role: 'Social / Video', reach: '680K', color: '#ffad83', initial: 'TT' },
+  { name: 'YouTube Kommentar-Cluster', role: 'Social / Video', reach: '210K', color: '#b9c7d8', initial: 'YT' },
+  { name: 'Finanzmarktaufsicht', role: 'Regulator / Financial', reach: '410K', color: '#f7c6aa', initial: 'FMA' }
 ];
 
 // Data source config for settings page

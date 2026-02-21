@@ -16,7 +16,28 @@ const BASE_ACTOR_CONNECTIONS = [
   { a: 'Telegram Channels', b: 'FB Bezirksgruppen', weight: 0.58 },
   { a: 'Der Standard', b: 'r/Wien Community', weight: 0.46 },
   { a: 'Kronen Zeitung', b: 'FB Bezirksgruppen', weight: 0.66 },
-  { a: 'VKI', b: 'Der Standard', weight: 0.62 }
+  { a: 'VKI', b: 'Der Standard', weight: 0.62 },
+  { a: 'E-Control', b: 'Wiener Stadtwerke', weight: 0.84 },
+  { a: 'E-Control', b: 'Klimaschutzministerium', weight: 0.72 },
+  { a: 'Wiener Stadtwerke', b: 'ORF Wien', weight: 0.7 },
+  { a: 'Wiener Stadtwerke', b: 'Bezirkszeitung Wien', weight: 0.68 },
+  { a: 'Klimaschutzministerium', b: 'ORF Wien', weight: 0.69 },
+  { a: 'Klimaschutzministerium', b: 'Der Standard', weight: 0.64 },
+  { a: 'Futurezone', b: 'Der Standard', weight: 0.61 },
+  { a: 'Futurezone', b: 'ORF Wien', weight: 0.57 },
+  { a: 'Futurezone', b: 'LinkedIn Energy Voices', weight: 0.56 },
+  { a: 'Mietervereinigung Wien', b: 'Arbeiterkammer Wien', weight: 0.77 },
+  { a: 'Mietervereinigung Wien', b: 'VKI', weight: 0.68 },
+  { a: 'Bezirkszeitung Wien', b: 'FB Bezirksgruppen', weight: 0.73 },
+  { a: 'Bezirkszeitung Wien', b: 'Kronen Zeitung', weight: 0.66 },
+  { a: 'LinkedIn Energy Voices', b: 'Wiener Stadtwerke', weight: 0.63 },
+  { a: 'TikTok Wien News', b: 'YouTube Kommentar-Cluster', weight: 0.71 },
+  { a: 'TikTok Wien News', b: 'FB Bezirksgruppen', weight: 0.58 },
+  { a: 'YouTube Kommentar-Cluster', b: 'r/Wien Community', weight: 0.56 },
+  { a: 'Finanzmarktaufsicht', b: 'E-Control', weight: 0.59 },
+  { a: 'Finanzmarktaufsicht', b: 'Klimaschutzministerium', weight: 0.55 },
+  { a: 'Telegram Channels', b: 'TikTok Wien News', weight: 0.41 },
+  { a: 'Futurezone', b: 'YouTube Kommentar-Cluster', weight: 0.4 }
 ];
 
 const ACTOR_SOURCE_HINTS = {
@@ -44,6 +65,36 @@ const ACTOR_SOURCE_HINTS = {
   ],
   'Telegram Channels': [
     { pattern: /telegram|\btg\b/, weight: 1.5 }
+  ],
+  'E-Control': [
+    { pattern: /e-control|regulator|energy control/, weight: 1.4 }
+  ],
+  'Wiener Stadtwerke': [
+    { pattern: /wien energie|stadt wien|wiener stadtwerke|utility/, weight: 1.35 }
+  ],
+  Klimaschutzministerium: [
+    { pattern: /klima|ministerium|bmk|foerder|co2/, weight: 1.3 }
+  ],
+  Futurezone: [
+    { pattern: /futurezone|tech blogs|tb|technik/, weight: 1.34 }
+  ],
+  'Mietervereinigung Wien': [
+    { pattern: /mieter|miet|vereinigung|fernwaerme/, weight: 1.32 }
+  ],
+  'Bezirkszeitung Wien': [
+    { pattern: /bezirkszeitung|bz|bezirke|bezirk/, weight: 1.3 }
+  ],
+  'LinkedIn Energy Voices': [
+    { pattern: /linkedin|\bin\b|professional|netzwerk/, weight: 1.28 }
+  ],
+  'TikTok Wien News': [
+    { pattern: /tiktok|tik|video|viral/, weight: 1.36 }
+  ],
+  'YouTube Kommentar-Cluster': [
+    { pattern: /youtube|kommentar|video/, weight: 1.3 }
+  ],
+  Finanzmarktaufsicht: [
+    { pattern: /fma|finanz|aufsicht/, weight: 1.26 }
   ]
 };
 
@@ -185,13 +236,15 @@ function buildNarrativeDataset(option) {
     .sort((a, b) => b.score - a.score);
 
   const topScore = ranked[0]?.score || 1;
+  const minActors = Math.min(10, ranked.length);
+  const maxActors = Math.min(15, ranked.length);
   const chosen = ranked
-    .filter((entry, idx) => entry.score >= topScore * 0.34 || idx < 4)
-    .slice(0, 6);
+    .filter((entry, idx) => entry.score >= topScore * 0.16 || idx < minActors)
+    .slice(0, maxActors);
 
-  const actors = chosen.length >= 3
+  const actors = chosen.length >= minActors
     ? chosen.map(entry => ({ ...entry.actor, relevance: entry.score }))
-    : ranked.slice(0, 4).map(entry => ({ ...entry.actor, relevance: entry.score }));
+    : ranked.slice(0, minActors).map(entry => ({ ...entry.actor, relevance: entry.score }));
 
   const relevanceByName = new Map();
   const best = Math.max(...actors.map(actor => actor.relevance || 0.1), 0.1);
@@ -405,21 +458,35 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
     const reachValues = actors.map(actor => parseReach(actor.reach));
     const minReach = reachValues.length ? Math.min(...reachValues) : 0;
     const maxReach = reachValues.length ? Math.max(...reachValues) : 0;
+    const relevanceValues = actors.map(actor => Number.isFinite(actor.relevance) ? actor.relevance : 0);
+    const minRelevance = relevanceValues.length ? Math.min(...relevanceValues) : 0;
+    const maxRelevance = relevanceValues.length ? Math.max(...relevanceValues) : 0;
 
     const normalizeReach = (index) => {
       if (!actors.length) return 0.5;
       if (maxReach === minReach) return 0.5;
       return (reachValues[index] - minReach) / (maxReach - minReach);
     };
+    const normalizeRelevance = (index) => {
+      if (!actors.length) return 0.5;
+      if (maxRelevance === minRelevance) return 0.5;
+      return (relevanceValues[index] - minRelevance) / (maxRelevance - minRelevance);
+    };
+    const normalizeInfluence = (index) => clamp(
+      normalizeReach(index) * 0.74 + normalizeRelevance(index) * 0.26,
+      0,
+      1
+    );
 
-    const anchors = buildAnchors(actors, state.w, state.h, normalizeReach);
-    const particles = buildParticles(actors, anchors, normalizeReach);
+    const anchors = buildAnchors(actors, state.w, state.h, normalizeInfluence);
+    const particles = buildParticles(actors, anchors, normalizeInfluence);
 
     return {
       base: baseData,
       actors,
       connections,
       normalizeReach,
+      normalizeInfluence,
       anchors,
       particles,
       actorByName: new Map(actors.map((actor, index) => [actor.name, index]))
@@ -653,8 +720,8 @@ function buildAnchors(actors, w, h, normalizeReach) {
           x,
           y,
           angle,
-          ringRadius: 30 + reachNorm * 34,
-          nodeRadius: 5 + reachNorm * 6,
+          ringRadius: 26 + reachNorm * 44,
+          nodeRadius: 4.4 + reachNorm * 8.6,
           drift: (entry.index + 1) * 0.6
         };
       });
@@ -670,7 +737,7 @@ function buildParticles(actors, anchors, normalizeReach) {
     if (!anchor || !actors[actorIndex]) return;
 
     const reachNorm = normalizeReach(actorIndex);
-    const count = 240 + Math.round(reachNorm * 190);
+    const count = 210 + Math.round(reachNorm * 260);
 
     for (let i = 0; i < count; i++) {
       const r1 = hash01(actorIndex * 1711 + i * 313);
@@ -788,7 +855,7 @@ function drawAnchors(ctx, state, dataset, anchorProvider, alphaMult, activeIndex
     const anchor = anchorProvider(index);
     if (!anchor) return;
 
-    const reachNorm = dataset.normalizeReach(index);
+    const reachNorm = dataset.normalizeInfluence ? dataset.normalizeInfluence(index) : dataset.normalizeReach(index);
     const isActive = activeIndex === index;
     const dimmed = activeIndex != null && !isActive;
 
@@ -829,10 +896,19 @@ function drawAnchors(ctx, state, dataset, anchorProvider, alphaMult, activeIndex
 
 function actorGroup(role) {
   const value = role.toLowerCase();
-  if (value.includes('regulator') || value.includes('protection') || value.includes('watchdog')) return 'institution';
+  if (
+    value.includes('regulator')
+    || value.includes('protection')
+    || value.includes('watchdog')
+    || value.includes('institution')
+    || value.includes('political')
+    || value.includes('utility')
+    || value.includes('civil')
+    || value.includes('financial')
+  ) return 'institution';
   if (value.includes('alt-media')) return 'alt';
   if (value.includes('social')) return 'social';
-  if (value.includes('media') || value.includes('broadcast')) return 'media';
+  if (value.includes('media') || value.includes('broadcast') || value.includes('tech')) return 'media';
   return 'social';
 }
 
