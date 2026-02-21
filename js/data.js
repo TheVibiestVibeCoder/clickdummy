@@ -18,7 +18,7 @@ export const CLUSTERS = [
     id: 1,
     x: -30, y: -22, z: 0,
     label: 'PREIS & TARIFE',
-    color: '#FF8C5A',
+    color: '#ff9966',
     reportText: 'Das Narrativ "Übergewinne auf Kosten der Kunden" dominiert weiterhin die Diskussion in sozialen Medien. Besonders die Jahresabrechnungen treiben negatives Sentiment. Vergleiche mit Spotmarktpreisen werden von AK und Boulevardmedien verstärkt.',
     riskText: 'Risiko einer koordinierten "Zahlungsstreik"-Kampagne auf Telegram. Sammelklagen-Thematik gewinnt durch Berichterstattung des VKI an Fahrt.',
     riskLevel: 'red',
@@ -93,7 +93,7 @@ export const CLUSTERS = [
     id: 2,
     x: 30, y: -7, z: 0,
     label: 'WÄRMEWENDE & INFRA',
-    color: '#22c55e',
+    color: '#ffb28c',
     reportText: 'Infrastrukturprojekte wie "Geothermie Simmering" werden von Leitmedien sehr positiv aufgenommen. Auf lokaler Ebene dominiert jedoch der "Baustellen-Frust" durch Straßensperren.',
     riskText: 'Lokaler Widerstand gegen Fernwärme-Ausbau in Währing und Döbling könnte sich zu einer stadtweiten "Verkehrschaos"-Debatte ausweiten.',
     riskLevel: 'amber',
@@ -146,7 +146,7 @@ export const CLUSTERS = [
     id: 3,
     x: 0, y: 29, z: 0,
     label: 'VERSORGUNG & INNOVATION',
-    color: '#a0ced9',
+    color: '#8e99ac',
     reportText: 'Das Thema Versorgungssicherheit ist stabil. E-Mobilität wächst stetig, aber die "Ladesäulen-Blockierer" sind ein emotionales Aufregerthema.',
     riskText: 'Sicherheitslücke bei Smart Metern könnte instrumentalisiert werden. Erste Berichte in Nischen-Foren über angebliche Datenschutzprobleme.',
     riskLevel: 'neutral',
@@ -229,14 +229,14 @@ export const EVIDENCE_EVENTS = [
 
 // Fake actors
 export const ACTORS = [
-  { name: 'Arbeiterkammer Wien', role: 'Regulator / Watchdog', reach: '2.1M', color: '#ef4444', initial: 'AK' },
-  { name: 'Kronen Zeitung', role: 'Boulevard Media', reach: '4.5M', color: '#d00', initial: 'KR' },
-  { name: 'ORF Wien', role: 'Public Broadcast', reach: '3.2M', color: '#666', initial: 'ORF' },
-  { name: 'Der Standard', role: 'Quality Media', reach: '1.8M', color: '#E58D90', initial: 'dS' },
-  { name: 'r/Wien Community', role: 'Social / Forum', reach: '145K', color: '#FF4500', initial: 'r/' },
-  { name: 'FB Bezirksgruppen', role: 'Social / Local', reach: '320K', color: '#1877F2', initial: 'fb' },
-  { name: 'VKI', role: 'Consumer Protection', reach: '890K', color: '#f59e0b', initial: 'VKI' },
-  { name: 'Telegram Channels', role: 'Alt-Media', reach: '12K', color: '#229ED9', initial: 'tg' }
+  { name: 'Arbeiterkammer Wien', role: 'Regulator / Watchdog', reach: '2.1M', color: '#ff9966', initial: 'AK' },
+  { name: 'Kronen Zeitung', role: 'Boulevard Media', reach: '4.5M', color: '#ff7f45', initial: 'KR' },
+  { name: 'ORF Wien', role: 'Public Broadcast', reach: '3.2M', color: '#d79f80', initial: 'ORF' },
+  { name: 'Der Standard', role: 'Quality Media', reach: '1.8M', color: '#ffb28c', initial: 'dS' },
+  { name: 'r/Wien Community', role: 'Social / Forum', reach: '145K', color: '#ff8a54', initial: 'r/' },
+  { name: 'FB Bezirksgruppen', role: 'Social / Local', reach: '320K', color: '#c2cada', initial: 'fb' },
+  { name: 'VKI', role: 'Consumer Protection', reach: '890K', color: '#ffd3bc', initial: 'VKI' },
+  { name: 'Telegram Channels', role: 'Alt-Media', reach: '12K', color: '#8e99ac', initial: 'tg' }
 ];
 
 // Data source config for settings page

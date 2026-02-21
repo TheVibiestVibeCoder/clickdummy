@@ -109,7 +109,7 @@ export function renderNarratives(container) {
         </div>
         <div class="narrative-card__details">
           <div class="narrative-card__details-inner">
-            <div style="font-size:var(--text-sm); color:var(--text-muted); line-height:var(--leading-relaxed); background:rgba(0,0,0,0.15); padding:var(--sp-12); border-radius:var(--radius-sm); border-left:2px solid var(--accent);">
+            <div style="font-size:var(--text-sm); color:var(--text-muted); line-height:var(--leading-relaxed); background:var(--surface-muted); border:1px solid var(--border-subtle); padding:var(--sp-12); border-radius:var(--radius-sm); border-left:2px solid var(--accent);">
               ${sub.explanation}
             </div>
             <div style="margin-top:var(--sp-16);">

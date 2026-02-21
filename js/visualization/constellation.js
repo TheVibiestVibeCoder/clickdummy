@@ -31,7 +31,7 @@ export function initConstellation(containerEl) {
   container.innerHTML = `
     <div class="viz-controls">
       <div style="display:flex; align-items:center; gap:var(--sp-12);">
-        <span class="panel__title" style="text-shadow: 0 2px 8px rgba(0,0,0,0.5);">Constellation Map</span>
+        <span class="panel__title">Constellation Map</span>
         <div class="pill-group">
           <button class="pill is-active" id="btn-graph">Graph</button>
           <button class="pill" id="btn-list">Liste</button>
@@ -52,7 +52,7 @@ export function initConstellation(containerEl) {
       <div id="interaction-layer" style="position:absolute;inset:0;z-index:3;cursor:grab;"></div>
     </div>
 
-    <div id="list-layer" class="list-layer" style="position:absolute; inset:0; top:48px; opacity:0; pointer-events:none; z-index:0; overflow-y:auto; padding:var(--sp-16); background:rgba(15,23,42,0.5);"></div>
+    <div id="list-layer" class="list-layer" style="position:absolute; inset:0; top:48px; opacity:0; pointer-events:none; z-index:0; overflow-y:auto; padding:var(--sp-16); background:rgba(8,10,13,0.9);"></div>
   `;
 
   // Set up refs
@@ -460,14 +460,14 @@ function drawHUD(s1, s2, time) {
       hudCtx.fill();
 
       hudCtx.globalAlpha = 1 - s1;
-      hudCtx.font = '600 13px Inter';
+      hudCtx.font = '650 13px Manrope';
       hudCtx.textAlign = 'center';
       hudCtx.fillStyle = c.color;
       hudCtx.fillText(c.label, sx, sy - 26);
 
       // NRI summary label
       const avgScore = getClusterAvgScore(c);
-      hudCtx.font = '400 10px "JetBrains Mono"';
+      hudCtx.font = '400 10px "IBM Plex Mono"';
       hudCtx.fillStyle = 'rgba(148,163,184,0.8)';
       hudCtx.fillText(`Score: ${avgScore > 0 ? '+' : ''}${avgScore}`, sx, sy - 12);
 
@@ -505,7 +505,7 @@ function drawHUD(s1, s2, time) {
 
         if (s2 < 0.8) {
           hudCtx.globalAlpha = a;
-          hudCtx.font = '500 11px Inter';
+          hudCtx.font = '600 11px Manrope';
           const tw = hudCtx.measureText(sub.label).width;
           const pad = 10;
           const boxX = ssx - tw / 2 - pad;
@@ -559,7 +559,7 @@ function drawHUD(s1, s2, time) {
 
             // Micro label chip
             hudCtx.globalAlpha = s2;
-            hudCtx.font = '400 9px "JetBrains Mono"';
+            hudCtx.font = '400 9px "IBM Plex Mono"';
             const mtw = hudCtx.measureText(mic.label).width;
             const mx = msx + 4, my = msy - 6, mw = mtw + 10, mh = 16;
 

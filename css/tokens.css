@@ -1,66 +1,66 @@
 /* ============================================================
-   DESIGN TOKENS — Risk Intel, EU-sovereign, Board-grade
+   DESIGN TOKENS - Dark theme with Atomic Tangerine accent
    ============================================================ */
 
 :root {
-  /* ── Palette: Slate / Ink ── */
-  --ink-950: #020617;
-  --ink-900: #0f172a;
-  --ink-850: #131c31;
-  --ink-800: #1e293b;
-  --ink-700: #334155;
-  --ink-600: #475569;
-  --ink-500: #64748b;
-  --ink-400: #94a3b8;
-  --ink-300: #cbd5e1;
-  --ink-200: #e2e8f0;
-  --ink-100: #f1f5f9;
+  /* Core neutrals */
+  --ink-950: #030405;
+  --ink-900: #080a0d;
+  --ink-850: #0d1014;
+  --ink-800: #13171d;
+  --ink-700: #1c222b;
+  --ink-600: #2a3340;
+  --ink-500: #49586b;
+  --ink-400: #748198;
+  --ink-300: #a2adbf;
+  --ink-200: #c2c9d6;
+  --ink-100: #e3e7ef;
 
-  /* ── Accent (single) ── */
-  --accent: #FF8C5A;
-  --accent-light: #FFA07A;
-  --accent-dim: rgba(255, 140, 90, 0.15);
-  --accent-glow: rgba(255, 140, 90, 0.25);
+  /* Accent: Atomic Tangerine */
+  --accent: #ff9966;
+  --accent-light: #ffb28c;
+  --accent-dim: rgba(255, 153, 102, 0.16);
+  --accent-glow: rgba(255, 153, 102, 0.3);
 
-  /* ── Risk / Signal (only alarming colors) ── */
-  --risk-neutral: var(--ink-400);
+  /* Signals */
+  --risk-neutral: #94a3b8;
   --risk-amber: #f59e0b;
   --risk-red: #ef4444;
-  --risk-amber-dim: rgba(245, 158, 11, 0.12);
-  --risk-red-dim: rgba(239, 68, 68, 0.10);
+  --risk-amber-dim: rgba(245, 158, 11, 0.14);
+  --risk-red-dim: rgba(239, 68, 68, 0.12);
 
-  /* ── Sentiment ── */
   --sentiment-pos: #22c55e;
-  --sentiment-neg: #ef4444;
+  --sentiment-neg: var(--risk-red);
   --sentiment-neutral: #eab308;
-  --sentiment-pos-dim: rgba(34, 197, 94, 0.12);
-  --sentiment-neg-dim: rgba(239, 68, 68, 0.10);
+  --sentiment-pos-dim: rgba(34, 197, 94, 0.14);
+  --sentiment-neg-dim: var(--risk-red-dim);
 
-  /* ── Cluster colors (VIZ ONLY, not UI decoration) ── */
-  --cluster-preis: #FF8C5A;
-  --cluster-waerme: #22c55e;
-  --cluster-versorgung: #a0ced9;
+  /* Cluster colors (data-viz only) */
+  --cluster-preis: #ff9966;
+  --cluster-waerme: #ffc8a8;
+  --cluster-versorgung: #8a94a7;
 
-  /* ── Surfaces ── */
-  --surface-base: var(--ink-900);
-  --surface-raised: var(--ink-800);
-  --surface-overlay: rgba(30, 41, 59, 0.92);
-  --surface-glass: rgba(30, 41, 59, 0.55);
-  --surface-glass-heavy: rgba(30, 41, 59, 0.80);
+  /* Surfaces */
+  --surface-base: #050607;
+  --surface-raised: #101319;
+  --surface-overlay: rgba(10, 12, 16, 0.92);
+  --surface-glass: rgba(16, 19, 25, 0.68);
+  --surface-glass-heavy: rgba(11, 14, 18, 0.84);
+  --surface-muted: #161b23;
 
-  /* ── Borders ── */
+  /* Borders */
   --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-default: rgba(255, 255, 255, 0.10);
+  --border-default: rgba(255, 255, 255, 0.1);
   --border-strong: rgba(255, 255, 255, 0.16);
-  --border-accent: rgba(255, 140, 90, 0.30);
+  --border-accent: rgba(255, 153, 102, 0.32);
 
-  /* ── Text ── */
-  --text-primary: #ffffff;
-  --text-secondary: var(--ink-400);
-  --text-tertiary: var(--ink-500);
-  --text-muted: var(--ink-300);
+  /* Text */
+  --text-primary: #f4f7fb;
+  --text-secondary: #a9b3c3;
+  --text-tertiary: #7f8a9c;
+  --text-muted: #c6ceda;
 
-  /* ── Spacing (8pt scale) ── */
+  /* Spacing */
   --sp-2: 2px;
   --sp-4: 4px;
   --sp-8: 8px;
@@ -71,56 +71,57 @@
   --sp-48: 48px;
   --sp-64: 64px;
 
-  /* ── Radii ── */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
+  /* Radius */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
   --radius-full: 9999px;
 
-  /* ── Shadows (ambient, not harsh) ── */
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.10);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.20), 0 2px 4px rgba(0,0,0,0.10);
-  --shadow-lg: 0 8px 32px rgba(0,0,0,0.30), 0 4px 8px rgba(0,0,0,0.15);
-  --shadow-xl: 0 16px 48px rgba(0,0,0,0.40), 0 8px 16px rgba(0,0,0,0.20);
-  --shadow-glow: 0 0 24px rgba(255, 140, 90, 0.08);
-  --shadow-panel-hover: 0 8px 40px rgba(0,0,0,0.35), 0 0 1px rgba(255,255,255,0.10);
+  /* Shadow */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 1px rgba(0, 0, 0, 0.24);
+  --shadow-md: 0 12px 24px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.45), 0 6px 16px rgba(0, 0, 0, 0.32);
+  --shadow-xl: 0 30px 68px rgba(0, 0, 0, 0.52), 0 10px 24px rgba(0, 0, 0, 0.36);
+  --shadow-glow: 0 0 28px rgba(255, 153, 102, 0.18);
+  --shadow-panel-hover: 0 20px 42px rgba(0, 0, 0, 0.45), 0 2px 10px rgba(0, 0, 0, 0.3);
 
-  /* ── Motion Tokens ── */
-  --duration-micro: 150ms;
-  --duration-ui: 280ms;
-  --duration-overlay: 420ms;
-  --duration-page: 520ms;
+  /* Motion */
+  --duration-micro: 140ms;
+  --duration-ui: 260ms;
+  --duration-overlay: 360ms;
+  --duration-page: 480ms;
 
   --ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-subtle: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-out: cubic-bezier(0, 0, 0.2, 1);
 
-  /* ── Typography ── */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  /* Typography */
+  --font-sans: "Manrope", "Segoe UI", sans-serif;
+  --font-display: "Sora", "Manrope", sans-serif;
+  --font-mono: "IBM Plex Mono", "JetBrains Mono", monospace;
 
-  --text-xs: 0.6875rem;   /* 11px */
-  --text-sm: 0.75rem;     /* 12px */
-  --text-base: 0.875rem;  /* 14px */
-  --text-md: 1rem;        /* 16px */
-  --text-lg: 1.125rem;    /* 18px */
-  --text-xl: 1.5rem;      /* 24px */
-  --text-2xl: 2rem;       /* 32px */
-  --text-3xl: 2.5rem;     /* 40px */
-  --text-hero: 3.5rem;    /* 56px */
+  --text-xs: 0.6875rem;
+  --text-sm: 0.75rem;
+  --text-base: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+  --text-3xl: 2.5rem;
+  --text-hero: 3.5rem;
 
   --leading-tight: 1.1;
   --leading-snug: 1.25;
   --leading-normal: 1.5;
   --leading-relaxed: 1.65;
 
-  --tracking-tight: -0.03em;
-  --tracking-normal: -0.01em;
+  --tracking-tight: -0.028em;
+  --tracking-normal: -0.012em;
   --tracking-wide: 0.04em;
 
-  /* ── Z-index scale ── */
+  /* Layering */
   --z-base: 0;
   --z-raised: 10;
   --z-nav: 100;
@@ -130,11 +131,10 @@
   --z-palette: 1100;
   --z-toast: 1200;
 
-  /* ── Noise overlay ── */
-  --noise-url: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  /* Subtle noise */
+  --noise-url: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
 }
 
-/* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
   :root {
     --duration-micro: 0ms;

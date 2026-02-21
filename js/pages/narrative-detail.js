@@ -74,7 +74,7 @@ export function renderNarrativeDetail(container, params) {
                     </div>
                     <div class="text-label" style="margin-bottom:var(--sp-8);">Micro-Narratives</div>
                     ${sub.micro.map(m => `
-                      <div style="padding:var(--sp-8); background:rgba(0,0,0,0.15); border-radius:var(--radius-sm); margin-bottom:var(--sp-8); font-size:var(--text-sm);">
+                      <div style="padding:var(--sp-8); background:var(--surface-muted); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); margin-bottom:var(--sp-8); font-size:var(--text-sm);">
                         <div style="font-weight:500; color:var(--text-primary); margin-bottom:var(--sp-4);">${m.label}</div>
                         <div style="color:var(--text-secondary); line-height:var(--leading-relaxed);">${m.desc}</div>
                       </div>
