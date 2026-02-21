@@ -18,39 +18,39 @@ export function renderReports(container) {
 
     <div class="reports-grid">
       <!-- Evidence Packs -->
-      <div>
-        <div class="panel" data-animate style="margin-bottom:var(--sp-16);">
+      <div class="reports-col">
+        <div class="panel report-panel" data-animate>
           <div class="panel__header">
             <span class="panel__title">Evidence Packs</span>
             <span class="panel__badge">${CLUSTERS.length} clusters</span>
           </div>
-          <div id="evidence-packs" style="position:relative; z-index:2;"></div>
+          <div id="evidence-packs" class="report-scroll"></div>
         </div>
 
-        <div class="panel" data-animate>
+        <div class="panel report-panel" data-animate>
           <div class="panel__header">
             <span class="panel__title">Intelligence Reports</span>
           </div>
-          <div id="intel-reports" style="position:relative; z-index:2;"></div>
+          <div id="intel-reports" class="report-scroll"></div>
         </div>
       </div>
 
       <!-- Audit Timeline -->
-      <div>
-        <div class="panel" data-animate style="margin-bottom:var(--sp-16);">
+      <div class="reports-col">
+        <div class="panel report-panel" data-animate>
           <div class="panel__header">
             <span class="panel__title">Audit Timeline</span>
             <span class="panel__badge">Live</span>
           </div>
-          <div class="evidence-trail" id="audit-timeline" style="position:relative; z-index:2;"></div>
+          <div class="evidence-trail report-scroll report-scroll--trail" id="audit-timeline"></div>
         </div>
 
-        <div class="panel" data-animate>
+        <div class="panel report-panel" data-animate>
           <div class="panel__header">
             <span class="panel__title">Risk Alerts</span>
             <span class="risk-badge risk-badge--red">3 Active</span>
           </div>
-          <div id="risk-alerts" style="position:relative; z-index:2;"></div>
+          <div id="risk-alerts" class="report-scroll"></div>
         </div>
       </div>
     </div>
