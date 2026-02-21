@@ -143,11 +143,11 @@ export function renderActors(container) {
           <div id="actors-list" style="display:flex; flex-direction:column; gap:var(--sp-8); position:relative; z-index:2; overflow-y:auto; min-height:0; max-height:clamp(260px, 52vh, 620px); padding-right:var(--sp-4);"></div>
         </div>
 
-        <div class="panel" data-animate>
+        <div class="panel" data-animate style="display:flex; flex-direction:column; min-height:0;">
           <div class="panel__header">
             <span class="panel__title">Actor Connections</span>
           </div>
-          <div id="actors-connections" style="position:relative; z-index:2; font-size:var(--text-sm); color:var(--text-secondary); line-height:var(--leading-relaxed);"></div>
+          <div id="actors-connections" style="position:relative; z-index:2; font-size:var(--text-sm); color:var(--text-secondary); line-height:var(--leading-relaxed); overflow-y:auto; min-height:0; max-height:clamp(220px, 34vh, 420px); padding-right:var(--sp-4);"></div>
         </div>
       </div>
     </div>
