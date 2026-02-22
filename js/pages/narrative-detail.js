@@ -23,8 +23,8 @@ export function renderNarrativeDetail(container, params) {
       <div class="detail-main">
         <!-- Header -->
         <div class="panel" data-animate>
-          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-            <div>
+          <div class="detail-cluster-head">
+            <div class="detail-cluster-main">
               <div style="display:flex; align-items:center; gap:var(--sp-12); margin-bottom:var(--sp-8);">
                 <span data-href="/narratives" style="cursor:pointer; color:var(--text-secondary); font-size:var(--text-sm);">&larr; Narratives</span>
                 <span style="color:var(--text-tertiary);">/</span>
@@ -34,7 +34,7 @@ export function renderNarrativeDetail(container, params) {
                 ${cluster.reportText}
               </div>
             </div>
-            <div style="text-align:right;">
+            <div class="detail-cluster-score">
               <div style="font-size:var(--text-xs); color:var(--text-secondary); margin-bottom:var(--sp-4);">Cluster Score</div>
               <div style="font-size:var(--text-2xl); font-weight:700; color:${color};" id="detail-score">0</div>
             </div>

@@ -114,10 +114,10 @@ export function renderActors(container) {
 
   container.innerHTML = `
     <div class="actors-grid">
-      <div class="panel" data-animate style="padding:0; overflow:hidden; position:relative;">
-        <div style="position:absolute; top:var(--sp-16); left:var(--sp-16); z-index:5; display:flex; flex-direction:column; gap:4px; max-width:52%;">
+      <div class="panel actors-map-panel" data-animate>
+        <div class="actor-graph-meta-wrap">
           <span class="panel__title">Actor Constellation</span>
-          <span id="actor-graph-meta" style="font-size:var(--text-xs); color:var(--text-secondary); font-family:var(--font-mono);">Overview: weighted influence map</span>
+          <span id="actor-graph-meta" class="actor-graph-meta">Overview: weighted influence map</span>
         </div>
 
         <div class="actor-map-controls">
@@ -144,20 +144,20 @@ export function renderActors(container) {
         </button>
       </div>
 
-      <div style="display:flex; flex-direction:column; gap:var(--sp-16); overflow-y:auto; min-height:0; padding-right:var(--sp-4);">
-        <div class="panel" data-animate style="display:flex; flex-direction:column; min-height:0;">
+      <div class="actors-side-column">
+        <div class="panel actors-list-panel" data-animate>
           <div class="panel__header">
             <span class="panel__title">Key Actors</span>
             <span class="panel__badge" id="actors-count-badge">${overallDataset.actors.length} tracked</span>
           </div>
-          <div id="actors-list" style="display:flex; flex-direction:column; gap:var(--sp-8); position:relative; z-index:2; overflow-y:auto; min-height:0; max-height:clamp(260px, 52vh, 620px); padding-right:var(--sp-4);"></div>
+          <div id="actors-list" class="actors-list-scroll"></div>
         </div>
 
-        <div class="panel" data-animate style="display:flex; flex-direction:column; min-height:0;">
+        <div class="panel actors-connections-panel" data-animate>
           <div class="panel__header">
             <span class="panel__title">Actor Connections</span>
           </div>
-          <div id="actors-connections" style="position:relative; z-index:2; font-size:var(--text-sm); color:var(--text-secondary); line-height:var(--leading-relaxed); overflow-y:auto; min-height:0; max-height:clamp(220px, 34vh, 420px); padding-right:var(--sp-4);"></div>
+          <div id="actors-connections" class="actors-connections-scroll"></div>
         </div>
       </div>
     </div>
@@ -443,9 +443,9 @@ function renderConnectionsTable(container, dataset) {
 
   sorted.forEach(edge => {
     const row = document.createElement('div');
-    row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:var(--sp-8) 0; border-bottom:1px solid var(--border-subtle);';
+    row.className = 'actor-connection-row';
     row.innerHTML = `
-      <span>${dataset.actors[edge.from].name} &harr; ${dataset.actors[edge.to].name}</span>
+      <span class="truncate">${dataset.actors[edge.from].name} &harr; ${dataset.actors[edge.to].name}</span>
       <span class="text-mono" style="font-size:var(--text-xs); color:${strengthColor(edge.weight)};">${strengthLabel(edge.weight)}</span>
     `;
     container.appendChild(row);
@@ -485,6 +485,8 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
     h: 0,
     centerX: 0,
     centerY: 0,
+    compact: false,
+    mobile: false,
     active: null,
     previous: null,
     hoverIndex: null,
@@ -504,7 +506,9 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
   function toRuntimeDataset(baseData) {
     const actors = baseData.actors || [];
     const connections = baseData.connections || [];
-    const nodeScale = computeNodeScale(actors.length);
+    const viewportNodeScale = state.mobile ? 0.74 : (state.compact ? 0.88 : 1);
+    const nodeScale = computeNodeScale(actors.length) * viewportNodeScale;
+    const densityScale = state.mobile ? 0.4 : (state.compact ? 0.66 : 1);
 
     const reachValues = actors.map(actor => parseReach(actor.reach));
     const minReach = reachValues.length ? Math.min(...reachValues) : 0;
@@ -529,9 +533,12 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
       1
     );
 
-    const anchors = buildAnchors(actors, state.w, state.h, normalizeInfluence, nodeScale);
+    const anchors = buildAnchors(actors, state.w, state.h, normalizeInfluence, nodeScale, {
+      compact: state.compact,
+      mobile: state.mobile
+    });
     const coneLayout = buildConeAnchors(actors, anchors, normalizeInfluence, nodeScale, state.w, state.h);
-    const particles = buildParticles(actors, anchors, normalizeInfluence, nodeScale);
+    const particles = buildParticles(actors, anchors, normalizeInfluence, nodeScale, densityScale);
 
     return {
       base: baseData,
@@ -545,6 +552,8 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
       coneLevels: coneLayout.levels,
       coneConfig: coneLayout.config,
       particles,
+      compact: state.compact,
+      mobile: state.mobile,
       actorByName: new Map(actors.map((actor, index) => [actor.name, index]))
     };
   }
@@ -554,7 +563,9 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
     state.w = rect.width;
     state.h = rect.height;
     state.centerX = state.w * 0.5;
-    state.centerY = state.h * 0.54;
+    state.mobile = state.w <= 820;
+    state.compact = state.w <= 1080;
+    state.centerY = state.h * (state.mobile ? 0.56 : 0.54);
 
     canvas.width = Math.max(1, Math.floor(rect.width * state.dpr));
     canvas.height = Math.max(1, Math.floor(rect.height * state.dpr));
@@ -769,9 +780,33 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
     onActorClick(state.active.actors[hit], hit);
   }
 
+  function onTouchStart(event) {
+    const touch = event.changedTouches?.[0];
+    if (!touch || !state.active) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const hit = hitTest({
+      x: touch.clientX - rect.left,
+      y: touch.clientY - rect.top
+    });
+
+    if (hit == null || !state.active.actors[hit]) {
+      state.lockedIndex = null;
+      state.focusIndex = null;
+      setHover(null);
+      return;
+    }
+
+    state.lockedIndex = hit;
+    state.focusIndex = hit;
+    setHover(hit);
+    onActorClick(state.active.actors[hit], hit);
+  }
+
   canvas.addEventListener('mousemove', onPointerMove);
   canvas.addEventListener('mouseleave', onPointerLeave);
   canvas.addEventListener('click', onPointerClick);
+  canvas.addEventListener('touchstart', onTouchStart, { passive: true });
   window.addEventListener('resize', resize);
 
   resize();
@@ -836,16 +871,20 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
       canvas.removeEventListener('mousemove', onPointerMove);
       canvas.removeEventListener('mouseleave', onPointerLeave);
       canvas.removeEventListener('click', onPointerClick);
+      canvas.removeEventListener('touchstart', onTouchStart);
       window.removeEventListener('resize', resize);
     }
   };
 }
 
-function buildAnchors(actors, w, h, normalizeReach, nodeScale = 1) {
+function buildAnchors(actors, w, h, normalizeReach, nodeScale = 1, opts = {}) {
+  const compact = Boolean(opts.compact);
+  const mobile = Boolean(opts.mobile);
   const cx = w * 0.5;
-  const cy = h * 0.54;
+  const cy = h * (mobile ? 0.57 : 0.54);
   const extent = Math.min(w, h);
-  const ringRadii = [extent * 0.17, extent * 0.24, extent * 0.31, extent * 0.39];
+  const spread = mobile ? 1.26 : (compact ? 1.12 : 1);
+  const ringRadii = [0.17, 0.24, 0.31, 0.39].map(r => extent * r * spread);
   const goldenAngle = Math.PI * (3 - Math.sqrt(5));
   const groupPhase = {
     institution: -0.72,
@@ -868,7 +907,11 @@ function buildAnchors(actors, w, h, normalizeReach, nodeScale = 1) {
     const radialJitter = (hash01((entry.index + 1) * 911 + order * 137) - 0.5) * extent * 0.11;
     const angleJitter = (hash01((entry.index + 1) * 337 + order * 57) - 0.5) * 1.05;
     const angle = (order * goldenAngle) + (groupPhase[entry.group] || 0) + angleJitter;
-    const radial = clamp(baseRing + radialJitter + reachNorm * extent * 0.05, extent * 0.14, extent * 0.47);
+    const radial = clamp(
+      baseRing + radialJitter + reachNorm * extent * 0.05,
+      extent * 0.14,
+      extent * (mobile ? 0.56 : (compact ? 0.51 : 0.47))
+    );
     const ySquash = 0.78 + hash01((entry.index + 1) * 271 + order * 7) * 0.2;
 
     anchors[entry.index] = {
@@ -951,14 +994,17 @@ function buildConeAnchors(actors, flatAnchors, normalizeInfluence, nodeScale = 1
   };
 }
 
-function buildParticles(actors, anchors, normalizeReach, nodeScale = 1) {
+function buildParticles(actors, anchors, normalizeReach, nodeScale = 1, densityScale = 1) {
   const particles = [];
 
   anchors.forEach((anchor, actorIndex) => {
     if (!anchor || !actors[actorIndex]) return;
 
     const reachNorm = normalizeReach(actorIndex);
-    const count = Math.round((190 + reachNorm * 230) * (0.8 + nodeScale * 0.34));
+    const count = Math.max(
+      70,
+      Math.round((190 + reachNorm * 230) * (0.8 + nodeScale * 0.34) * densityScale)
+    );
 
     for (let i = 0; i < count; i++) {
       const r1 = hash01(actorIndex * 1711 + i * 313);
@@ -1085,7 +1131,19 @@ function drawConeGuides(ctx, state, dataset, modeBlend) {
 function drawConnectionCurves(ctx, state, dataset, anchorProvider, alphaMult, activeIndex, modeBlend = 0) {
   if (!dataset || !dataset.connections.length || alphaMult <= 0.01) return;
 
-  const preparedEdges = dataset.connections
+  const compact = state.compact || dataset.compact;
+  const mobile = state.mobile || dataset.mobile;
+  const connectionScale = mobile ? 0.7 : (compact ? 0.82 : 1);
+  let visibleConnections = dataset.connections;
+
+  if (compact && activeIndex == null && dataset.connections.length > 0) {
+    const maxEdges = mobile ? 10 : 18;
+    visibleConnections = [...dataset.connections]
+      .sort((a, b) => b.weight - a.weight)
+      .slice(0, maxEdges);
+  }
+
+  const preparedEdges = visibleConnections
     .map(edge => {
       const from = anchorProvider(edge.from);
       const to = anchorProvider(edge.to);
@@ -1116,10 +1174,13 @@ function drawConnectionCurves(ctx, state, dataset, anchorProvider, alphaMult, ac
     const ctrlY = midY + toCenterY * lerp(0.24, 0.08, modePull) - lift;
 
     const emphasized = activeIndex == null || edge.from === activeIndex || edge.to === activeIndex;
-    const alpha = (emphasized ? 0.22 + edge.weight * 0.18 : 0.05) * alphaMult * lerp(1, 0.9 + depth * 0.2, modePull);
+    const alpha = (emphasized ? 0.22 + edge.weight * 0.18 : 0.05)
+      * alphaMult
+      * lerp(1, 0.9 + depth * 0.2, modePull)
+      * connectionScale;
     const width = emphasized
-      ? (0.7 + edge.weight * 1.2) * lerp(1, 0.85 + depth * 0.26, modePull)
-      : 0.6;
+      ? (0.7 + edge.weight * 1.2) * lerp(1, 0.85 + depth * 0.26, modePull) * connectionScale
+      : 0.6 * connectionScale;
 
     ctx.beginPath();
     ctx.moveTo(from.x, from.y);
@@ -1181,8 +1242,10 @@ function drawAnchors(ctx, state, dataset, anchorProvider, alphaMult, activeIndex
 
   const nodeScale = dataset.nodeScale || 1;
   const actorCount = dataset.actors.length;
-  const dense = actorCount >= 12;
-  const crowded = actorCount >= 15;
+  const compact = state.compact || dataset.compact;
+  const mobile = state.mobile || dataset.mobile;
+  const dense = actorCount >= (compact ? 10 : 12);
+  const crowded = actorCount >= (mobile ? 10 : compact ? 12 : 15);
   const modePull = easeInOutSine(modeBlend);
   const drawable = dataset.actors
     .map((actor, index) => ({ actor, index, anchor: anchorProvider(index) }))
@@ -1199,7 +1262,8 @@ function drawAnchors(ctx, state, dataset, anchorProvider, alphaMult, activeIndex
     const isActive = activeIndex === index;
     const dimmed = activeIndex != null && !isActive;
 
-    const haloR = (anchor.nodeRadius + (8 + nodeScale * 2.4) + Math.sin(performance.now() * 0.002 + anchor.drift) * 1.6)
+    const haloBase = compact ? (6 + nodeScale * 2) : (8 + nodeScale * 2.4);
+    const haloR = (anchor.nodeRadius + haloBase + Math.sin(performance.now() * 0.002 + anchor.drift) * 1.6)
       * lerp(1, 0.92 + depth * 0.2, modePull);
     ctx.beginPath();
     ctx.arc(anchor.x, anchor.y, haloR, 0, Math.PI * 2);
@@ -1219,7 +1283,7 @@ function drawAnchors(ctx, state, dataset, anchorProvider, alphaMult, activeIndex
     ctx.fillStyle = dimmed ? `rgba(255,255,255,${(0.2 * alphaMult).toFixed(3)})` : rgbaFromHex(actor.color, alphaMult);
     ctx.fill();
 
-    const labelOffset = 20 + reachNorm * 11 + (1 - nodeScale) * 5;
+    const labelOffset = (compact ? 16 : 20) + reachNorm * (compact ? 9 : 11) + (1 - nodeScale) * (compact ? 4 : 5);
     let vx = anchor.x - state.centerX;
     let vy = (anchor.y - state.centerY) * lerp(1.08, 0.84 + (1 - depth) * 0.22, modePull);
     const vLen = Math.hypot(vx, vy) || 1;
@@ -1227,10 +1291,28 @@ function drawAnchors(ctx, state, dataset, anchorProvider, alphaMult, activeIndex
     vy /= vLen;
     const tx = anchor.x + vx * labelOffset;
     const ty = anchor.y + vy * labelOffset;
-    const showReach = isActive || (!dense && modeBlend < 0.62);
-    const showName = isActive || !crowded || (activeIndex != null && !dimmed) || (modeBlend > 0.5 && (anchor.coneLevel || 0) > 0.8);
-    const displayName = crowded && !isActive ? compactActorName(actor.name) : actor.name;
-    const nameSize = clamp(9 + nodeScale * 2.6, 9, 12);
+    const showReach = isActive || (!dense && !compact && modeBlend < 0.62);
+
+    let showName = isActive
+      || !crowded
+      || (activeIndex != null && !dimmed)
+      || (modeBlend > 0.5 && (anchor.coneLevel || 0) > 0.8);
+
+    if (compact) {
+      const focusThreshold = mobile ? 0.62 : 0.54;
+      const ambientThreshold = mobile ? 0.84 : 0.76;
+      showName = isActive
+        || (activeIndex != null && !dimmed && reachNorm >= focusThreshold)
+        || (activeIndex == null && actorCount <= (mobile ? 8 : 10) && reachNorm >= ambientThreshold)
+        || (modeBlend > 0.56 && (anchor.coneLevel || 0) > (mobile ? 0.88 : 0.82));
+    }
+
+    const displayName = (crowded || compact) && !isActive ? compactActorName(actor.name) : actor.name;
+    const nameSize = clamp(
+      (compact ? 8.2 : 9) + nodeScale * (compact ? 2.15 : 2.6),
+      compact ? 8 : 9,
+      compact ? 11 : 12
+    );
 
     if (!showName) return;
 
@@ -1247,7 +1329,7 @@ function drawAnchors(ctx, state, dataset, anchorProvider, alphaMult, activeIndex
       ctx.fillStyle = dimmed
         ? `rgba(127,138,156,${(0.5 * alphaMult).toFixed(3)})`
         : `rgba(169,179,195,${(0.86 * alphaMult).toFixed(3)})`;
-      ctx.fillText(actor.reach, tx, ty + 10);
+      ctx.fillText(actor.reach, tx, ty + (compact ? 9 : 10));
     }
   });
 }

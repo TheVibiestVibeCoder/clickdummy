@@ -16,6 +16,7 @@ function init() {
   // Initialize global components
   initSideSheet();
   initCommandPalette();
+  initTopnavMobileMenu();
 
   // Wire up Cmd+K trigger button in navbar
   const cmdKTrigger = document.getElementById('cmd-k-trigger');
@@ -36,6 +37,52 @@ function init() {
 
   // Start router
   initRouter();
+}
+
+function initTopnavMobileMenu() {
+  const topnav = document.querySelector('.topnav');
+  const toggleBtn = document.getElementById('topnav-toggle');
+  const navLinks = document.getElementById('topnav-links');
+  if (!topnav || !toggleBtn || !navLinks) return;
+
+  topnav.classList.add('topnav--mobile-ready');
+
+  const closeMenu = () => {
+    topnav.classList.remove('topnav--menu-open');
+    toggleBtn.setAttribute('aria-expanded', 'false');
+    toggleBtn.setAttribute('aria-label', 'Open navigation menu');
+  };
+
+  const openMenu = () => {
+    topnav.classList.add('topnav--menu-open');
+    toggleBtn.setAttribute('aria-expanded', 'true');
+    toggleBtn.setAttribute('aria-label', 'Close navigation menu');
+  };
+
+  const toggleMenu = () => {
+    if (topnav.classList.contains('topnav--menu-open')) {
+      closeMenu();
+      return;
+    }
+    openMenu();
+  };
+
+  const syncViewportState = () => {
+    if (window.innerWidth > 900) closeMenu();
+  };
+
+  toggleBtn.addEventListener('click', toggleMenu);
+  navLinks.addEventListener('click', (e) => {
+    if (e.target.closest('.nav-link')) closeMenu();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeMenu();
+  });
+
+  window.addEventListener('resize', syncViewportState);
+  window.addEventListener('hashchange', closeMenu);
+  syncViewportState();
 }
 
 // Boot

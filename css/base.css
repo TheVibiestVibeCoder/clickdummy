@@ -27,6 +27,7 @@ body {
   background-repeat: no-repeat;
   background-attachment: fixed;
   min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
   line-height: var(--leading-normal);
   letter-spacing: var(--tracking-normal);
@@ -153,3 +154,9 @@ a:hover {
 .gap-12 { gap: var(--sp-12); }
 .gap-16 { gap: var(--sp-16); }
 .gap-24 { gap: var(--sp-24); }
+
+@media (max-width: 900px) {
+  body {
+    background-attachment: scroll;
+  }
+}
