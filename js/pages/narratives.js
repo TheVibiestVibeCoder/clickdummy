@@ -200,7 +200,7 @@ export function renderNarratives(container) {
       </div>
 
       <div class="narr-list" data-animate>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--sp-16);">
+        <div class="narr-list-header">
           <h2 style="font-size:var(--text-lg);">All Narratives</h2>
           <span style="font-size:var(--text-sm); color:var(--text-secondary);" id="narr-count"></span>
         </div>

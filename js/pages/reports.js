@@ -8,12 +8,12 @@ import { createExportButton } from '../components/export-button.js';
 
 export function renderReports(container) {
   container.innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--sp-24);">
+    <div class="reports-page-header">
       <div>
         <h2 style="font-size:var(--text-xl);">Reports & Audit Trail</h2>
         <p style="font-size:var(--text-sm); color:var(--text-secondary); margin-top:var(--sp-4);">Evidence packs, compliance exports, and audit timeline</p>
       </div>
-      <div style="display:flex; gap:var(--sp-8);" id="report-actions"></div>
+      <div class="reports-page-actions" id="report-actions"></div>
     </div>
 
     <div class="reports-grid">
@@ -81,7 +81,7 @@ export function renderReports(container) {
         <span class="risk-badge risk-badge--${c.riskLevel}">${c.riskLevel.toUpperCase()}</span>
       </div>
       <div class="report-card__body" style="margin-bottom:var(--sp-12);">${c.reportText.substring(0, 120)}...</div>
-      <div style="display:flex; gap:var(--sp-16); font-size:var(--text-xs); color:var(--text-secondary);">
+      <div class="report-card__stats">
         <span>${c.subTopics.length} sub-narratives</span>
         <span>${totalSources} sources</span>
         <span>${c.subTopics.reduce((sum, s) => sum + s.micro.length, 0)} micro-narratives</span>
@@ -103,7 +103,7 @@ export function renderReports(container) {
   ];
   reportItems.forEach(r => {
     const item = document.createElement('div');
-    item.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:var(--sp-12) 0; border-bottom:1px solid var(--border-subtle); cursor:pointer; font-size:var(--text-sm);';
+    item.className = 'report-item-row';
     item.innerHTML = `
       <div>
         <div style="font-weight:500; color:var(--text-primary);">${r.title}</div>

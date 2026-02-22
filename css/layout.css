@@ -4,12 +4,14 @@
 
 :root {
   --topnav-height: 68px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 #app {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .topnav {
@@ -193,6 +195,7 @@
   right: 0;
   width: min(540px, 92vw);
   height: 100vh;
+  height: 100dvh;
   background: var(--surface-raised);
   border-left: 1px solid var(--border-default);
   z-index: calc(var(--z-sheet) + 1);
@@ -251,7 +254,7 @@
 }
 
 .side-sheet__footer {
-  padding: var(--sp-16) var(--sp-24);
+  padding: var(--sp-16) var(--sp-24) calc(var(--sp-16) + var(--safe-bottom));
   border-top: 1px solid var(--border-subtle);
   background: var(--surface-muted);
   font-size: var(--text-sm);
@@ -327,6 +330,7 @@
 
 .command-palette__results {
   max-height: 380px;
+  max-height: min(60dvh, 380px);
   overflow-y: auto;
   padding: var(--sp-8);
 }
@@ -392,6 +396,7 @@
   border-radius: var(--radius-xl);
   width: min(560px, 92vw);
   max-height: 80vh;
+  max-height: 80dvh;
   box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
@@ -519,6 +524,8 @@
   .topnav__actions {
     width: 100%;
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--sp-8);
   }
 
   .page-content {
@@ -527,5 +534,81 @@
 
   .side-sheet {
     width: 100vw;
+    border-left: none;
+  }
+
+  .side-sheet__header,
+  .side-sheet__body {
+    padding: var(--sp-16);
+  }
+
+  .side-sheet__footer {
+    padding: var(--sp-12) var(--sp-16) calc(var(--sp-12) + var(--safe-bottom));
+  }
+
+  .command-palette-overlay {
+    padding-top: min(14vh, 84px);
+  }
+
+  .command-palette__input-wrap {
+    padding: var(--sp-12) var(--sp-16);
+  }
+
+  .command-palette__hint {
+    padding: var(--sp-10) var(--sp-16);
+    gap: var(--sp-12);
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 640px) {
+  .topnav {
+    padding: var(--sp-10) var(--sp-12);
+  }
+
+  .topnav__brand {
+    font-size: var(--text-sm);
+  }
+
+  .topnav__brand-accent,
+  .topnav__status-label,
+  .kbd-hint span {
+    display: none;
+  }
+
+  .topnav__status {
+    margin-left: 0;
+  }
+
+  .topnav__links {
+    padding-bottom: 0;
+  }
+
+  .nav-link {
+    padding: 6px var(--sp-8);
+  }
+
+  .page-content {
+    padding: var(--sp-12);
+  }
+
+  .command-palette {
+    width: calc(100vw - 20px);
+  }
+
+  .command-palette__hint {
+    display: none;
+  }
+
+  .modal {
+    width: calc(100vw - 20px);
+    max-height: 86dvh;
+  }
+
+  .modal__header,
+  .modal__body,
+  .modal__footer {
+    padding-left: var(--sp-16);
+    padding-right: var(--sp-16);
   }
 }

@@ -54,6 +54,8 @@ let zoomValue;
 let zoomReadout;
 let fullscreenBtn;
 let fullscreenVeil;
+let controlsBar;
+let viewTopOffset = VIEW_TOP_OFFSET;
 
 export function initConstellation(containerEl) {
   container = containerEl;
@@ -108,6 +110,7 @@ export function initConstellation(containerEl) {
   zoomReadout = null;
   fullscreenBtn = container.querySelector('#map-fullscreen-btn');
   fullscreenVeil = container.querySelector('#map-fs-veil');
+  controlsBar = container.querySelector('.viz-controls');
 
   const btnGraph = container.querySelector('#btn-graph');
   const btnList = container.querySelector('#btn-list');
@@ -123,6 +126,7 @@ export function initConstellation(containerEl) {
     listLayer.style.opacity = '0';
     listLayer.style.pointerEvents = 'none';
     if (zoomStripEl) zoomStripEl.style.display = '';
+    syncViewTopOffset();
     onResize();
   });
 
@@ -134,6 +138,7 @@ export function initConstellation(containerEl) {
     listLayer.style.opacity = '1';
     listLayer.style.pointerEvents = 'auto';
     if (zoomStripEl) zoomStripEl.style.display = 'none';
+    syncViewTopOffset();
     renderListView(listLayer);
   });
 
@@ -143,8 +148,9 @@ export function initConstellation(containerEl) {
   }
 
   try {
+    syncViewTopOffset();
     width = container.clientWidth;
-    height = Math.max(1, container.clientHeight - VIEW_TOP_OFFSET);
+    height = Math.max(1, container.clientHeight - viewTopOffset);
     initTime = Date.now() * 0.001;
 
     scene = new THREE.Scene();
@@ -533,6 +539,25 @@ function updateReadout() {
     zoomReadout.textContent = stageKey === 'micro' ? 'Mikro' : (stageKey === 'sub' ? 'Sub-Cluster' : 'Makro');
   }
   container.setAttribute('data-zoom-stage', stageKey);
+}
+
+function syncViewTopOffset() {
+  if (!container) return;
+
+  const fallback = VIEW_TOP_OFFSET;
+  const controls = controlsBar || container.querySelector('.viz-controls');
+
+  if (!controls) {
+    viewTopOffset = fallback;
+    container.style.setProperty('--constellation-top-offset', `${viewTopOffset}px`);
+    return;
+  }
+
+  const rect = controls.getBoundingClientRect();
+  const styles = window.getComputedStyle(controls);
+  const rowGap = parseFloat(styles.rowGap || styles.gap || '0') || 0;
+  viewTopOffset = Math.max(fallback, Math.ceil(rect.height + rowGap + 8));
+  container.style.setProperty('--constellation-top-offset', `${viewTopOffset}px`);
 }
 
 function clamp(v, min, max) {
@@ -1267,8 +1292,9 @@ function drawMicroTag({ x, y, text, accent, alpha }) {
 function onResize() {
   if (!container || !renderer || !hudCanvas || !hudCtx) return;
 
+  syncViewTopOffset();
   width = container.clientWidth;
-  height = Math.max(1, container.clientHeight - VIEW_TOP_OFFSET);
+  height = Math.max(1, container.clientHeight - viewTopOffset);
 
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
@@ -1356,6 +1382,9 @@ export function destroyConstellation() {
   particlesMesh = null;
   hudCanvas = null;
   hudCtx = null;
+  controlsBar = null;
+  viewTopOffset = VIEW_TOP_OFFSET;
+  if (container) container.style.removeProperty('--constellation-top-offset');
 
   particleData.length = 0;
   macroAnchors.length = 0;

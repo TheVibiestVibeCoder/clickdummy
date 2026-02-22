@@ -86,12 +86,12 @@ export function openSideSheet(data) {
 
     <div class="modal__section">
       <div class="modal__label">Sentiment & Trend</div>
-      <div style="display:flex; align-items:center; justify-content:space-between; background:var(--surface-muted); border:1px solid var(--border-subtle); padding:var(--sp-16); border-radius:var(--radius-md);">
+      <div class="side-sheet-sentiment">
         <div>
           <div style="font-size:var(--text-xs); color:var(--text-secondary); margin-bottom:var(--sp-4);">Sentiment Score</div>
           <div style="font-size:var(--text-lg); font-weight:700; color:${color};">${label} (${data.score})</div>
         </div>
-        <svg class="sparkline" style="width:100px;height:30px;" viewBox="0 0 48 20">
+        <svg class="sparkline side-sheet-sparkline" viewBox="0 0 48 20">
           <polyline points="${sparkPoints(data.score > 0.3 ? 'up' : data.score < -0.3 ? 'down' : 'flat')}" stroke="${color}" fill="none" stroke-width="1.5"/>
         </svg>
       </div>
