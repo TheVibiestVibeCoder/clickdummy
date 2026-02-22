@@ -4,6 +4,7 @@
 
 :root {
   --topnav-height: 68px;
+  --safe-top: env(safe-area-inset-top, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -22,7 +23,7 @@
   z-index: var(--z-nav);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: var(--sp-16);
   min-height: var(--topnav-height);
   padding: 0 var(--sp-24);
   background: var(--surface-glass-heavy);
@@ -36,6 +37,7 @@
   align-items: center;
   gap: var(--sp-16);
   min-width: 0;
+  flex-shrink: 0;
 }
 
 .topnav__brand {
@@ -67,6 +69,8 @@
   display: flex;
   align-items: center;
   gap: var(--sp-4);
+  min-width: 0;
+  flex: 1;
 }
 
 .nav-link {
@@ -102,6 +106,8 @@
   display: flex;
   align-items: center;
   gap: var(--sp-12);
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .kbd-hint {
@@ -540,20 +546,24 @@
 @media (max-width: 900px) {
   .topnav {
     min-height: var(--topnav-height);
-    flex-wrap: nowrap;
-    top: 8px;
-    margin: 0 var(--sp-12);
-    padding: var(--sp-10) calc(var(--sp-14) + var(--safe-right)) var(--sp-10) calc(var(--sp-14) + var(--safe-left));
+    top: 0;
+    margin: 0;
+    padding: calc(var(--sp-10) + var(--safe-top)) calc(var(--sp-14) + var(--safe-right)) var(--sp-10) calc(var(--sp-14) + var(--safe-left));
     border: 1px solid var(--border-default);
-    border-radius: var(--radius-md);
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    border-radius: 0;
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
-    gap: var(--sp-8);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: var(--sp-12);
+    row-gap: 0;
   }
 
   .topnav__left {
-    width: auto;
-    flex: 1;
-    flex-wrap: nowrap;
+    width: 100%;
     gap: var(--sp-8);
   }
 
@@ -569,9 +579,11 @@
   }
 
   .topnav__links {
-    width: auto;
+    grid-column: 1 / -1;
+    width: 100%;
     overflow: visible;
     padding-bottom: 0;
+    margin: 0;
   }
 
   .topnav.topnav--mobile-ready .topnav__links {
@@ -579,28 +591,16 @@
   }
 
   .topnav.topnav--menu-open {
-    flex-wrap: wrap;
     align-items: stretch;
-    gap: var(--sp-10);
-    padding-top: var(--sp-12);
+    row-gap: var(--sp-10);
     padding-bottom: var(--sp-12);
   }
 
-  .topnav.topnav--menu-open .topnav__left {
-    width: 100%;
-    flex-wrap: wrap;
-    gap: var(--sp-10);
-    padding-right: 50px;
-  }
-
   .topnav.topnav--menu-open .topnav__links {
-    order: 3;
     display: flex;
-    width: 100%;
     flex-direction: column;
     align-items: stretch;
     gap: var(--sp-4);
-    overflow: visible;
     padding: var(--sp-8);
     border-radius: var(--radius-md);
     border: 1px solid var(--border-default);
@@ -613,7 +613,7 @@
     width: 100%;
     text-align: left;
     font-size: var(--text-sm);
-    min-height: 40px;
+    min-height: 42px;
     padding: 9px var(--sp-12);
     border-radius: 12px;
   }
@@ -624,20 +624,10 @@
 
   .topnav__actions {
     width: auto;
-    margin-left: auto;
+    margin-left: 0;
     justify-content: flex-end;
     flex-wrap: nowrap;
     gap: var(--sp-8);
-  }
-
-  .topnav.topnav--menu-open .topnav__actions {
-    position: absolute;
-    top: var(--sp-10);
-    right: calc(var(--sp-10) + var(--safe-right));
-    width: auto;
-    margin-left: 0;
-    justify-content: flex-end;
-    z-index: 4;
   }
 
   .kbd-hint {
@@ -654,6 +644,8 @@
 
   .topnav__toggle {
     display: inline-flex;
+    width: 40px;
+    height: 40px;
   }
 
   .page-content {
@@ -691,10 +683,8 @@
 
 @media (max-width: 640px) {
   .topnav {
-    top: 6px;
-    margin: 0 var(--sp-10);
     min-height: 60px;
-    padding: var(--sp-9) calc(var(--sp-11) + var(--safe-right)) var(--sp-9) calc(var(--sp-11) + var(--safe-left));
+    padding: calc(var(--sp-9) + var(--safe-top)) calc(var(--sp-11) + var(--safe-right)) var(--sp-9) calc(var(--sp-11) + var(--safe-left));
   }
 
   .topnav__brand {
@@ -710,9 +700,8 @@
     margin-left: 0;
   }
 
-  .topnav.topnav--menu-open .topnav__actions {
-    top: var(--sp-8);
-    right: calc(var(--sp-8) + var(--safe-right));
+  .topnav.topnav--menu-open {
+    row-gap: var(--sp-8);
   }
 
   .topnav__links {
@@ -721,6 +710,10 @@
 
   .nav-link {
     padding: 6px var(--sp-8);
+  }
+
+  .topnav.topnav--menu-open .nav-link {
+    min-height: 40px;
   }
 
   .page-content {
