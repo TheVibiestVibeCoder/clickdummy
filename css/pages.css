@@ -1173,6 +1173,78 @@
   font-size: 0.7rem;
 }
 
+.actor-cone-toggle {
+  position: absolute;
+  right: var(--sp-16);
+  bottom: var(--sp-16);
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-8);
+  padding: 8px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background:
+    linear-gradient(155deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.03)),
+    rgba(8, 11, 15, 0.58);
+  color: rgba(229, 236, 247, 0.88);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  cursor: pointer;
+  backdrop-filter: blur(10px) saturate(130%);
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition:
+    border-color var(--duration-ui) var(--ease-standard),
+    background var(--duration-ui) var(--ease-standard),
+    color var(--duration-ui) var(--ease-standard),
+    transform var(--duration-ui) var(--ease-standard),
+    box-shadow var(--duration-ui) var(--ease-standard);
+}
+
+.actor-cone-toggle:hover {
+  border-color: rgba(255, 178, 140, 0.44);
+  background:
+    linear-gradient(155deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.04)),
+    rgba(11, 14, 19, 0.72);
+  color: rgba(248, 251, 255, 0.96);
+  transform: translateY(-1px);
+}
+
+.actor-cone-toggle:focus-visible {
+  outline: none;
+  border-color: rgba(255, 178, 140, 0.62);
+  box-shadow:
+    0 0 0 2px rgba(255, 178, 140, 0.18),
+    0 14px 26px rgba(0, 0, 0, 0.32);
+}
+
+.actor-cone-toggle.is-active {
+  border-color: rgba(255, 178, 140, 0.58);
+  background:
+    linear-gradient(150deg, rgba(255, 178, 140, 0.34), rgba(255, 178, 140, 0.1)),
+    rgba(14, 17, 22, 0.78);
+  color: #fff;
+  box-shadow:
+    0 14px 28px rgba(0, 0, 0, 0.36),
+    0 0 26px rgba(255, 153, 102, 0.22);
+}
+
+.actor-cone-toggle__icon {
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+.actor-cone-toggle__text {
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .actors-graph {
   position: relative;
   overflow: hidden;
@@ -1362,5 +1434,14 @@
 
   .actor-map-controls {
     width: min(320px, 62%);
+  }
+
+  .actor-cone-toggle {
+    min-width: 34px;
+    padding: 8px;
+  }
+
+  .actor-cone-toggle__text {
+    display: none;
   }
 }
