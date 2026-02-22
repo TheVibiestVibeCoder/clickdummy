@@ -506,8 +506,9 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
   function toRuntimeDataset(baseData) {
     const actors = baseData.actors || [];
     const connections = baseData.connections || [];
-    const nodeScale = computeNodeScale(actors.length);
-    const densityScale = state.mobile ? 0.54 : (state.compact ? 0.72 : 1);
+    const viewportNodeScale = state.mobile ? 0.74 : (state.compact ? 0.88 : 1);
+    const nodeScale = computeNodeScale(actors.length) * viewportNodeScale;
+    const densityScale = state.mobile ? 0.4 : (state.compact ? 0.66 : 1);
 
     const reachValues = actors.map(actor => parseReach(actor.reach));
     const minReach = reachValues.length ? Math.min(...reachValues) : 0;
@@ -532,7 +533,10 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
       1
     );
 
-    const anchors = buildAnchors(actors, state.w, state.h, normalizeInfluence, nodeScale);
+    const anchors = buildAnchors(actors, state.w, state.h, normalizeInfluence, nodeScale, {
+      compact: state.compact,
+      mobile: state.mobile
+    });
     const coneLayout = buildConeAnchors(actors, anchors, normalizeInfluence, nodeScale, state.w, state.h);
     const particles = buildParticles(actors, anchors, normalizeInfluence, nodeScale, densityScale);
 
@@ -559,9 +563,9 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
     state.w = rect.width;
     state.h = rect.height;
     state.centerX = state.w * 0.5;
-    state.centerY = state.h * 0.54;
-    state.mobile = state.w <= 640;
-    state.compact = state.w <= 920;
+    state.mobile = state.w <= 820;
+    state.compact = state.w <= 1080;
+    state.centerY = state.h * (state.mobile ? 0.56 : 0.54);
 
     canvas.width = Math.max(1, Math.floor(rect.width * state.dpr));
     canvas.height = Math.max(1, Math.floor(rect.height * state.dpr));
@@ -873,11 +877,14 @@ function initActorConstellation({ canvas, onActorClick, onHover }) {
   };
 }
 
-function buildAnchors(actors, w, h, normalizeReach, nodeScale = 1) {
+function buildAnchors(actors, w, h, normalizeReach, nodeScale = 1, opts = {}) {
+  const compact = Boolean(opts.compact);
+  const mobile = Boolean(opts.mobile);
   const cx = w * 0.5;
-  const cy = h * 0.54;
+  const cy = h * (mobile ? 0.57 : 0.54);
   const extent = Math.min(w, h);
-  const ringRadii = [extent * 0.17, extent * 0.24, extent * 0.31, extent * 0.39];
+  const spread = mobile ? 1.26 : (compact ? 1.12 : 1);
+  const ringRadii = [0.17, 0.24, 0.31, 0.39].map(r => extent * r * spread);
   const goldenAngle = Math.PI * (3 - Math.sqrt(5));
   const groupPhase = {
     institution: -0.72,
@@ -900,7 +907,11 @@ function buildAnchors(actors, w, h, normalizeReach, nodeScale = 1) {
     const radialJitter = (hash01((entry.index + 1) * 911 + order * 137) - 0.5) * extent * 0.11;
     const angleJitter = (hash01((entry.index + 1) * 337 + order * 57) - 0.5) * 1.05;
     const angle = (order * goldenAngle) + (groupPhase[entry.group] || 0) + angleJitter;
-    const radial = clamp(baseRing + radialJitter + reachNorm * extent * 0.05, extent * 0.14, extent * 0.47);
+    const radial = clamp(
+      baseRing + radialJitter + reachNorm * extent * 0.05,
+      extent * 0.14,
+      extent * (mobile ? 0.56 : (compact ? 0.51 : 0.47))
+    );
     const ySquash = 0.78 + hash01((entry.index + 1) * 271 + order * 7) * 0.2;
 
     anchors[entry.index] = {
@@ -1126,7 +1137,7 @@ function drawConnectionCurves(ctx, state, dataset, anchorProvider, alphaMult, ac
   let visibleConnections = dataset.connections;
 
   if (compact && activeIndex == null && dataset.connections.length > 0) {
-    const maxEdges = mobile ? 14 : 22;
+    const maxEdges = mobile ? 10 : 18;
     visibleConnections = [...dataset.connections]
       .sort((a, b) => b.weight - a.weight)
       .slice(0, maxEdges);
