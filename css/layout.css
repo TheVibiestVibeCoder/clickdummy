@@ -68,6 +68,8 @@
 }
 
 .nav-link {
+  display: inline-flex;
+  align-items: center;
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   font-weight: 600;
@@ -143,11 +145,7 @@
 }
 
 .topnav__status-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 10px rgba(255, 153, 102, 0.46);
+  display: none;
 }
 
 .topnav__toggle {
@@ -541,7 +539,7 @@
   .topnav {
     min-height: var(--topnav-height);
     flex-wrap: nowrap;
-    padding: var(--sp-12) var(--sp-16);
+    padding: var(--sp-12) calc(var(--sp-16) + env(safe-area-inset-right, 0px)) var(--sp-12) calc(var(--sp-16) + env(safe-area-inset-left, 0px));
     gap: var(--sp-8);
   }
 
@@ -570,14 +568,17 @@
 
   .topnav.topnav--menu-open {
     flex-wrap: wrap;
-    align-items: flex-start;
+    align-items: stretch;
     gap: var(--sp-10);
+    padding-top: var(--sp-14);
+    padding-bottom: var(--sp-14);
   }
 
   .topnav.topnav--menu-open .topnav__left {
     width: 100%;
     flex-wrap: wrap;
     gap: var(--sp-10);
+    padding-right: 48px;
   }
 
   .topnav.topnav--menu-open .topnav__links {
@@ -595,10 +596,13 @@
   }
 
   .topnav.topnav--menu-open .nav-link {
+    display: flex;
     width: 100%;
     text-align: left;
     font-size: var(--text-sm);
+    min-height: 38px;
     padding: 8px var(--sp-12);
+    border-radius: 12px;
   }
 
   .topnav__divider {
@@ -614,9 +618,13 @@
   }
 
   .topnav.topnav--menu-open .topnav__actions {
-    width: 100%;
+    position: absolute;
+    top: var(--sp-12);
+    right: calc(var(--sp-16) + env(safe-area-inset-right, 0px));
+    width: auto;
     margin-left: 0;
     justify-content: flex-end;
+    z-index: 4;
   }
 
   .kbd-hint {
@@ -628,7 +636,7 @@
   }
 
   .topnav__status {
-    margin-left: 0;
+    display: none;
   }
 
   .topnav__toggle {
@@ -670,7 +678,7 @@
 
 @media (max-width: 640px) {
   .topnav {
-    padding: var(--sp-10) var(--sp-12);
+    padding: var(--sp-10) calc(var(--sp-12) + env(safe-area-inset-right, 0px)) var(--sp-10) calc(var(--sp-12) + env(safe-area-inset-left, 0px));
   }
 
   .topnav__brand {
@@ -684,6 +692,10 @@
 
   .topnav__status {
     margin-left: 0;
+  }
+
+  .topnav.topnav--menu-open .topnav__actions {
+    right: calc(var(--sp-12) + env(safe-area-inset-right, 0px));
   }
 
   .topnav__links {
